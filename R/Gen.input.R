@@ -213,7 +213,8 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Sample
   ASE_vars<-ASE_vars[!duplicated(ASE_vars[,c("Ind", "id")]),]
   cat("Merge complete\n")
   #print(head(ASE_vars))
-  output_file = paste(c(output_path, Chromosome, ".RData"), collapse="")
-  save.image(file=output_file) 
+  output_file = paste(c(output_path, "Run.model.input_Chr",  Chromosome, ".RData"), collapse="")
+  save.image(file=output_file)
+  print("Finished") 
 }  
 
