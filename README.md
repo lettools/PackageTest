@@ -14,7 +14,7 @@
 * library(biomaRt)
 
 ### Input files 
-Only those columns that are required are shown. The sample, legend and hap files are in the SHAPEIT2 format (http://mathgen.stats.ox.ac.uk/genetics_software/shapeit/shapeit.html).
+Only those columns that are required are shown. The sample, legend and hap files are in the IMPUTE format (https://mathgen.stats.ox.ac.uk/impute/1000GP_Phase3.html).
 
 Both the legend and sample files have headers, but the hap does not. Your hap file should have the same number of rows as that of the legend (once the legend's header is accounted for) and should also have twice the number of columns as the sample has rows, because each individual will have two haplotypes. Below are examples of acceptable formats. 
 
@@ -22,18 +22,18 @@ The ASE file must contain the position of the ASE sites, including the chromosom
 
 ```
 # Format of sample Samples file
-#    ID        SEX    POP
-#1 HG00096    male    GBR
-#2 HG00097  female    GBR
-#3 HG00099  female    GBR
-#4 NA20827    male    TSI
+#  ID        SEX    POP
+# HG00096    male    GBR
+# HG00097  female    GBR
+# HG00099  female    GBR
+# NA20827    male    TSI
 
 
 # Format of the legend file
-#                    id     position    a0  a1   TYPE
-#1           10:60515:C:T    60515       C   T   Biallelic_SNP
-#2  rs148087467:60523:T:G    60523       T   G   Biallelic_SNP
-#3 rs147855157:61372:CA:C    61372       CA  C   Biallelic_INDEL
+#                   id     position    a0  a1   TYPE
+#           10:60515:C:T    60515       C   T   Biallelic_SNP
+#  rs148087467:60523:T:G    60523       T   G   Biallelic_SNP
+# rs147855157:61372:CA:C    61372       CA  C   Biallelic_INDEL
 
 
 # Format of the hap file
@@ -44,9 +44,9 @@ The ASE file must contain the position of the ASE sites, including the chromosom
 
 # Format of sample ASE file
 #   chr    end    ref    alt      Ind         refCount    altCount
-#1  22   135032   G      A       HG00276       19            0
-#2  22   135032   G      A       HG00282       12            0
-#3  22   135032   G      A       NA11831       10            0
+#  22   135032   G      A       HG00276       19            0
+#  22   135032   G      A       HG00282       12            0
+#  22   135032   G      A       NA11831       10            0
 ```
 
 
@@ -67,10 +67,10 @@ install_github("ac1990/PackageTest")
 library("PackageTest")
 
 # Load the sample files 
-download.file("https://www.dropbox.com/s/ta37uvy1tfxefcb/sample_ASE.txt.gz?dl=1","sample_ASE.txt.gz")
-download.file("https://www.dropbox.com/s/5ii1cqhgosp3kxd/sample_Samples.txt.gz?dl=1","sample_hap.gz")
-download.file("https://www.dropbox.com/s/5ii1cqhgosp3kxd/sample_Samples.txt.gz?dl=1","sample_Samples.txt.gz")
-download.file("https://www.dropbox.com/s/j96ha8afl0rw1uz/sample_LEG.gz?dl=1","sample_LEG.gz")
+download.file("https://www.dropbox.com/s/cjb7xsx0qvos0y4/sample_ASE.txt.gz?dl=1","sample_ASE.txt.gz")
+download.file("https://www.dropbox.com/s/dp173n4af6fo6c8/sample_haplotypes.hap.gz?dl=1","sample_haplotypes.hap.gz")
+download.file("https://www.dropbox.com/s/9ngy0ao6hahpic2/sample_Samples.txt.gz?dl=1","sample_Samples.txt.gz")
+download.file("https://www.dropbox.com/s/w2arx4728c3rycv/sample_legend.leg.gz?dl=1","sample_legend.leg.gz")
 
 
 # Run the first function, Gen.input, with the sample files 
