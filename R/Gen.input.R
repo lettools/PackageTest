@@ -167,8 +167,9 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Sample
     } 
     ensembl <- getBM(attributes=c("chromosome_name", "ensembl_transcript_id", "ensembl_gene_id", "start_position", "exon_chrom_start", "exon_chrom_end", "transcript_start" , "transcript_end", "strand"), mart
                      =ens)
-    cat("ensembl data downloaded")
-    print(head(ensembl))
+    print("Downloading ensembl data") 
+    print("ensembl data downloaded")
+    #print(head(ensembl))
     
     # To correct for overall level of expression at given haplotype for given individual
     refSums<-cbind(aggregate(refCount~Ind, data=ASE, FUN=sum),0)
@@ -214,6 +215,7 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Sample
     cat("Merge complete\n")
     #print(head(ASE_vars))
     output_file = paste(c(output_path, "Run.model.input_Chr",  Chromosome, ".RData"), collapse="")
+    print(paste(c(output_file, "being saved", collapse=""))
     save.image(file=output_file) 
     print("Finished")
 }  
