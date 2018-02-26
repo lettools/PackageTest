@@ -31,7 +31,7 @@
 #'                     "mmusculus")
 
 # 1. What you put into the command line
-Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Samples, output_path,
+Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Samples_file, output_path,
                       Species="hsapiens", EnsemblVersion=NULL)
 {
   # 2. For timing length of script                                                                                                  
