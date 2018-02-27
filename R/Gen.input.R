@@ -67,7 +67,7 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Sample
     
     # 6. Load input files                                 
     Samples<-read.table(Samples_file, header=T)
-    cols <- colnames(Samples_file)
+    cols <- colnames(Samples)
     if (!"ID" %in% cols | !"SEX" %in% cols | !"POP" %in% cols)
     {
       ID <- c("HG00096", "HG00097", "HG00099", "NA20827") 
