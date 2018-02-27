@@ -68,6 +68,7 @@ i <- 1
 task <- Task 
 # All the input required for this chromosome (loads < 1 min, generally)
 load(file=input_file)
+print("Input file loaded")
 getHetCounts<-function(set)
 {
   hetCountsAll<-aggregate(Ind~id+end+TSS+Gene.x, data=ASE_vars, FUN=length)
