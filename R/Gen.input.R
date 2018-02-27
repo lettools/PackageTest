@@ -42,7 +42,7 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Sample
   cat(paste(c("              ASE file:        ", ASE_file, "\n"), collapse=""))
   cat(paste(c("              legend file:     ", legend_file, "\n"), collapse=""))
   cat(paste(c("              haplotypes file: ", haplotypes_file, "\n"), collapse=""))
-  cat(paste(c("              Samples file:    ", Samples, "\n"), collapse=""))
+  cat(paste(c("              Samples file:    ", Samples_file, "\n"), collapse=""))
   #cat(paste(c("              Number of tasks: ", NumTasks, "\n"), collapse=""))
   cat(paste(c("              Species:         ", Species, "\n"), collapse=""))
   if(!is.null(EnsemblVersion))
