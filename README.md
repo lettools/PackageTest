@@ -4,7 +4,7 @@
 
 
 ### Dependencies ###
-* This package was built in R/3.2.2 and requires the following packages to run:
+* This package was built in R/3.3.2 and requires the following packages to run:
 * library(GenomicRanges)
 * library(reshape2)
 * library(rtracklayer)
@@ -23,17 +23,17 @@ The ASE file must contain the position of the ASE sites, including the chromosom
 ```
 # Format of sample Samples file
 #  ID        SEX    POP
-# HG00096    male    GBR
-# HG00097  female    GBR
-# HG00099  female    GBR
-# NA20827    male    TSI
+#1 HG00096    male    GBR
+#2 HG00097  female    GBR
+#3 HG00099  female    GBR
+#4 NA20827    male    TSI
 
 
 # Format of the legend file
-#                   id     position    a0  a1   TYPE
-#           10:60515:C:T    60515       C   T   Biallelic_SNP
-#  rs148087467:60523:T:G    60523       T   G   Biallelic_SNP
-# rs147855157:61372:CA:C    61372       CA  C   Biallelic_INDEL
+#                    id     position    a0  a1   TYPE
+#1           10:60515:C:T    60515       C   T   Biallelic_SNP
+#2  rs148087467:60523:T:G    60523       T   G   Biallelic_SNP
+#3 rs147855157:61372:CA:C    61372       CA  C   Biallelic_INDEL
 
 
 # Format of the hap file
@@ -44,14 +44,15 @@ The ASE file must contain the position of the ASE sites, including the chromosom
 
 # Format of sample ASE file
 #   chr    end    ref    alt      Ind         refCount    altCount
-#  22   135032   G      A       HG00276       19            0
-#  22   135032   G      A       HG00282       12            0
-#  22   135032   G      A       NA11831       10            0
+#1  22   135032   G      A       HG00276       19            0
+#2  22   135032   G      A       HG00282       12            0
+#3  22   135032   G      A       NA11831       10            0
 ```
 
 
 ### Functions
-1. `Gen.input`is a function to generate an input for the model to run. Separating out into two functions saves memory and greatly speeds up parallelisation for what is a computationally demanding task in the second function. The input files are formatted, gene and transcript start site information added to the ASE file, and finally output in .RData format to be loaded into the second function.
+1. `Gen.input`is a function to generate an input for the model to run. Separating out into two functions saves memory and greatly speeds up paralleldownload.file("https://www.dropbox.com/s/cjb7xsx0qvos0y4/sample_ASE.txt.gz?dl=1","sample_ASE.txt.gz")
+isation for what is a computationally demanding task in the second function. The input files are formatted, gene and transcript start site information added to the ASE file, and finally output in .RData format to be loaded into the second function.
 2. `Run.Model` is a function that allows you to measure statistical association between nearby regulatory variants and the level of expression at a heterozygous coding polymorphism, controlling for factors such as sex and population, by utilising a generalized linear model and applying permutations to the data in order to provide a robust p-value. As the function supports parallelisation, a number of .txt files equal to the number of tasks, `numTasks`, specified in the function will be outputted.  
 
 
@@ -66,22 +67,37 @@ install_github("ac1990/PackageTest")
 # Then load package as normal:
 library("PackageTest")
 
-# Load the sample files 
-download.file("https://www.dropbox.com/s/cjb7xsx0qvos0y4/sample_ASE.txt.gz?dl=1","sample_ASE.txt.gz")
-download.file("https://www.dropbox.com/s/dp173n4af6fo6c8/sample_haplotypes.hap.gz?dl=1","sample_haplotypes.hap.gz")
-download.file("https://www.dropbox.com/s/9ngy0ao6hahpic2/sample_Samples.txt.gz?dl=1","sample_Samples.txt.gz")
-download.file("https://www.dropbox.com/s/w2arx4728c3rycv/sample_legend.leg.gz?dl=1","sample_legend.leg.gz")
+# Now create a directory to work in:
+dir.create("PackageTestWork")
+setwd("PackageTestWork")
+
+# Next, create a directory to store the output files of both functions
+# Outputs from the first function are in .RData formate
+dir.create("RDataFiles")
+dir.create("ModelResults")
+
+# Create a directory to store checkpointed progress files generated during the Run.Model function
+dir.create("ProgressFiles")
+
+# Download the sample files in R
+download.file("https://www.dropbox.com/s/cosadgz59hmfoxx/sample_ASE.txt?dl=1","sample_ASE.txt")
+download.file("https://www.dropbox.com/s/eycoqh5s6bh8lyq/sample_legend.leg?dl=1","sample_legend.leg")
+download.file("https://www.dropbox.com/s/e8sfx3gbziserkh/sample_haplotypes.hap?dl=1","sample_haplotypes.hap")
+download.file("https://www.dropbox.com/s/8su6scg0ojkc8pm/sample_Samples.txt?dl=1","sample_Samples.txt")
+
+# Or download manually via a web browser
+*https://www.dropbox.com/s/cosadgz59hmfoxx/sample_ASE.txt?dl=1
+*https://www.dropbox.com/s/eycoqh5s6bh8lyq/sample_legend.leg?dl=1
+*https://www.dropbox.com/s/e8sfx3gbziserkh/sample_haplotypes.hap?dl=1
+*https://www.dropbox.com/s/8su6scg0ojkc8pm/sample_Samples.txt?dl=1
 
 
-# Run the first function, Gen.input, with the sample files 
+# Gen.input.R 
 # This function allows you to output .RData files to be used as input for the analysis run in the second function.
 # This only needs to be done once for each chromosome. This ensures the running of the model is not too computationally demanding.
 # Parameters such as the number of permutations and the TSS window can be tweaked in the Run.model function. 
 # The processing of input files need not be done repeatedly, as they are constant
 # Hence separating this processing out allows tweaks to be made to the parameters without having to re-run the processing.
-# Usage:
-     Gen.input(Chromosome, ASE_file, legend_file, haplotypes_file, Samples,
-       output_path, Species = "hsapiens", EnsemblVersion = NULL)
        
 # Arguments:
 # Chromosome: Specify chromosome. Must be in the same format as that found in Ensembl. For example, if you are
@@ -96,32 +112,20 @@ download.file("https://www.dropbox.com/s/w2arx4728c3rycv/sample_legend.leg.gz?dl
 # EnsemblVersion: Specify version of Ensembl to download from. Defaults to NULL which is the most recent build
 
 # Examples:
-
 # Downloading Ensembl information for chromosome 22 of hsapiens, using the build corresponding to the sample data
-     Gen.input(22, "path_to_ASE_file/ASEfile.txt.gz",
-                         "path_to_legend_file/file.legendfile.gz",
-                        "path_to_haplotypes_file/hapfile.hap.gz",
-                         "path_to_samples_file/samples.txt", EnsemblVersion=78)
+ Gen.input(Chromosome=22, ASE_file="sample_ASE.txt", legend_file="sample_legend.leg", haplotypes_file="sample_haplotypes.hap", Samples_file="sample_Samples.txt",
+       output_path="RDataFiles/", Species = "hsapiens", EnsemblVersion = 78)
      
 # Downloading Ensembl information for chromosome 22 of hsapiens, using the most recent build 
-     Gen.input(22, "path_to_ASE_file/ASEfile.txt.gz",
-                         "path_to_legend_file/file.legendfile.gz",
-                        "path_to_haplotypes_file/hapfile.hap.gz",
-                         "path_to_samples_file/samples.txt")
+     Gen.input(22, "ASE_file", legend_file", "haplotypes_file", "samples_file", "RDataFiles/")
      
 # Downloading Ensembl information for chromosome 1 of mmusculus, using the most recent build
-     Gen.input(1, "path_to_ASE_file/ASEfile.txt.gz",
-                         "path_to_legend_file/file.legendfile.gz",
-                       "path_to_haplotypes_file/hapfile.hap.gz",
-                         "path_to_samples_file/samples.txt",
+     Gen.input(1, "ASE_file", legend_file", "haplotypes_file", "samples_file", "RDataFiles/", species="mmusculus")
 
 
 
 # Next, run the model.
 # The RData files outputted from the function, Gen.input, can now be used to run the analysis in the second function, below.
-# Usage:
- Run.Model(input_file, Task, progress_path, output_path, numTasks = 1000,
-       Chromosome, numPerms = 100000, TSSwindow = 500000, pval_threshold = 0.00005)   
              
 # Arguments: 
 # input_file: This is the RData file outputted from the first function, Gen.input
@@ -163,25 +167,30 @@ download.file("https://www.dropbox.com/s/w2arx4728c3rycv/sample_legend.leg.gz?dl
 #                 theoretically.
           
           
-# Examples:          
-          
+# Examples:
+# Downloading Ensembl information for chromosome 22 of hsapiens, using the build corresponding to the sample data
+Run.Model("RDataFiles/Run.model.input_Chr22.RData", 10, numTasks=100, 
+             "ProgressFiles",
+             "ModelResults",
+             Chromosome=22)
+
 # Run model with task set to 10, chromosome to 22, for 100,000 permutations, a transcript start site window of 500kb and a theoretical p-value threshold of 0.00005
-     Run.Model("input_file.RData", 10, 
+     Run.Model("RDataFiles/Run.model.input_Chr22.RData", 10, 
              "path_to_progress_file",
              "output_path",
              Chromosome=22)
      
-# Run model with task    set to 10, chromosome to 22, for 10,000 permutations, a transcript start site window of 500kb and a theoretical p-value of 0.0005
+# Run model with task set to 10, chromosome to 22, for 10,000 permutations, a transcript start site window of 500kb and a theoretical p-value of 0.0005
      Run.Model("input_file.RData", 10,
              "path_to_progress_file",
              "output_path",
              Chromosome=22, numPerms=10000, pval_threshold=10000)
      
-# Run model with task    set to 2, chromosome to 12, for 10,000 permutations, a transcript start site window of 1Mb and a theoretical p-value of 0.0005
-     Run.Model("input_file.RData", 2,
+# Run model with task set to 2, chromosome to 12, for 10,000 permutations, a transcript start site window of 1Mb and a theoretical p-value of 0.0005
+     Run.Model("RDataFiles/Run.model.input_Chr12.RData", 2,
              "path_to_progress_file",
              "output_path",
-             Chromosome=22, numPerms=10000,TSSwindow=100000, pval_threshold=10000)
+             Chromosome=12, numPerms=10000,TSSwindow=100000, pval_threshold=10000)
      
 #     NB: The smallest possible p-value attainable as a result of running permutations is 1/numPerms. 
 #         Hence, there is no advantage to setting the minimum p-value threshold to below this number.
@@ -234,6 +243,7 @@ df2$adjusted_p <- p.adjust(df2$permuted_p,"fdr",n=length(df2$permuted_p))
 
 Could even put these all in a function. They call the function and it installs them all.
 
+speedglm works in 3.3.2, 3.4.3, 3.4.0
 
 
 
