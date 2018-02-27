@@ -72,7 +72,7 @@ dir.create("PackageTestWork")
 setwd("PackageTestWork")
 
 # Next, create a directory to store the output files of both functions
-# Outputs from the first function are in .RData formate
+# Outputs from the first function are in .RData format
 dir.create("RDataFiles")
 dir.create("ModelResults")
 
