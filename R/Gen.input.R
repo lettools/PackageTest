@@ -215,8 +215,9 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Sample
     cat("Merge complete\n")
     output_file = paste(c(output_path, "Run.model.input_Chr",  Chromosome, ".RData"), collapse="")
     print(paste(c("Saving ", output_file), collapse=""))
-    save.image(file=output_file) 
-    print("Finished")
+    
+  save(list = ls(all.names = TRUE), file = output_file, envir = environment())
+  print("Finished")
 }  
   
 
