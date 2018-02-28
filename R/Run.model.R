@@ -172,7 +172,7 @@ fitModels<-function(exprGenos)
   fitsA <- lapply(vars, function(x) {tryCatch(speedglm(substitute(Count~Reads+SEX+POP+i, list(i = as.name(x))), family=poisson(), data = exprGenos),error=function(e) NULL)})
   return(getFitStats(fitsA))
 }  
-print(head(ASE_vars))
+#print(head(ASE_vars))
 # You have to set the task argument here if testing because loading in the image above resets the args to that of the image's
 # number tss should end in. (choose 10 to experiment on for chr 22. has 2 ASE SNPs)
 #args[2]<-11
@@ -289,6 +289,7 @@ if(dim(hetCounts)[1] > 0)
           theseResults[rownames(theseResults) %in% rownames(permResults),]$numPerm<-permResults$numPerm
           theseResults[rownames(theseResults) %in% rownames(permResults),]$numPermExceed<-permResults$numPermExceed
         }
+        print(paste(c(totalPerms, " completed"), collapse=""))
         totalPerms<-totalPerms+perms
       }
       results<-rbind.fill(results, theseResults[which(theseResults$Variant_p <= 1),])
