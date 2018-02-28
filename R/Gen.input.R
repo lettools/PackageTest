@@ -207,7 +207,7 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Sample
     completemerge <- rbind (merge,merge2)
     colnames(completemerge)[2] <- "id"
     # Add the TSS and geneid information to the ASE_vars df
-    newdf <- data.frame(id=completemerge$id, TSS=completemerge$TSS, completemerge$geneid)
+    newdf <- data.frame(id=completemerge$id, TSS=completemerge$TSS, Gene=completemerge$geneid)
     # This merge takes a while
     print("Now merging")
     ASE_vars <- merge(newdf, ASE_vars, by = "id")
