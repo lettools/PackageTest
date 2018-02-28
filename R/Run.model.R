@@ -72,8 +72,9 @@ print("Input file loaded")
 getHetCounts<-function(set)
 {
   hetCountsAll<-aggregate(Ind~id+end+TSS+Gene.x, data=ASE_vars, FUN=length)
+  print(set)
   hetCountsAll<-hetCountsAll[which(hetCountsAll$Ind > 10),]
-  set<-str_pad(as.numeric(set)-1, 3, pad = "0")       
+  set<-str_pad(as.numeric(set)-1, 2, pad = "0")       
  # if (numTasks == 1000)
   #{
   #       set<-str_pad(as.numeric(set)-1, 3, pad = "0")
