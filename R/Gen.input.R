@@ -54,7 +54,7 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Sample
     # 4. Loading packages
     library(GenomicRanges)
     library(reshape2)
-    library(rtracklayer)
+   # library(rtracklayer)
 #    library(speedglm)
     library(stringr)
     library(plyr)
