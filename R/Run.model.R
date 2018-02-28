@@ -125,15 +125,12 @@ getFitStats<-function(fits)
     rownames(stat)[length(rownames(stat))]<-"Variant_stat"
     rownames(pvals)[length(rownames(pvals))]<-"Variant_p"
     coeff_p<-cbind.data.frame(hetCounts[i,],cbind.data.frame(colnames(stat),cbind.data.frame(t(stat),t(pvals))))
-    #print(head(coeff_p))  
     #add NAs for any missing columns
     missingCols<-colHead[which(!(colHead %in% colnames(coeff_p)))]
     coeff_p[,missingCols]<-"NA"
     #order columns
     coeff_p<-coeff_p[,colHead]
   }
-  #print(head(coeff_p))
-  #print(dim(coeff_p))                    
   return(coeff_p)
 }
                   
@@ -145,7 +142,6 @@ fitPerms<-function(exprGenos, nomResults, numPerm)
   #nomResults<-nomResults[order(nomResults$"colnames(coeff)"),]
   for(k in 1:numPerm)
   {
-    #print(totalPerms+k)
     vars<-colnames(exprGenos)[-c(1:6)]
     fitsA <- lapply(vars, function(x) {tryCatch(speedglm(substitute(as.formula(paste("Count~Reads+SEX+POP+sample(",i,")", sep="")), list(i = x)), family=poisson(), data = exprGenos),error=function(e) NULL)
 })
@@ -164,25 +160,18 @@ fitPerms<-function(exprGenos, nomResults, numPerm)
       #get rows where the permutation coefficent is greater than the nominal coefficent so can increment their counts
       nomResults$numPermExceed[which(abs(mergedStat[,3]) >= abs(mergedStat[,2]))]<-nomResults$numPermExceed[which(abs(mergedStat[,3]) >= abs(mergedStat[,2]))]+1
 
-      #if(length(b)-length(which(b %in% a)) != 0)
-      #{
-      #  print("Problem with fitPerms")
-      #}
+
     }
   }
-  #print(nomResults)
   return(nomResults)
 }
 fitModels<-function(exprGenos)
 {
   vars<-colnames(exprGenos)[-c(1:6)]
-  #print(dim(exprGenos))
-  #print(grep("rs192726033.30223136.G.C", vars))
   fitsA <- lapply(vars, function(x) {tryCatch(speedglm(substitute(Count~Reads+SEX+POP+i, list(i = as.name(x))), family=poisson(), data = exprGenos),error=function(e) NULL)})
   return(getFitStats(fitsA))
 }  
 print(head(ASE_vars))
-print(head(LEG))
 # You have to set the task argument here if testing because loading in the image above resets the args to that of the image's
 # number tss should end in. (choose 10 to experiment on for chr 22. has 2 ASE SNPs)
 #args[2]<-11
