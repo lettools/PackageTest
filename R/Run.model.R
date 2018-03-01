@@ -289,7 +289,7 @@ if(dim(hetCounts)[1] > 0)
           theseResults[rownames(theseResults) %in% rownames(permResults),]$numPerm<-permResults$numPerm
           theseResults[rownames(theseResults) %in% rownames(permResults),]$numPermExceed<-permResults$numPermExceed
         }
-        print(paste(c(totalPerms, " completed"), collapse=""))
+        print(paste(c(totalPerms, " permutations completed"), collapse=""))
         totalPerms<-totalPerms+perms
       }
       results<-rbind.fill(results, theseResults[which(theseResults$Variant_p <= 1),])
