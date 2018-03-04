@@ -301,6 +301,7 @@ if(dim(hetCounts)[1] > 0)
     i <- i + 1
   }
 }
+setwd("..")
 setwd(output_path)
 print(getwd())
 output_file = paste(c("Results_chr", Chromosome, "_task", Task, "_perm.txt"), collapse="")                    
