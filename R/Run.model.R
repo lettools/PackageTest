@@ -302,8 +302,11 @@ if(dim(hetCounts)[1] > 0)
   }
 }
 print(head(results))
+print(getwd())
 output_file = paste(c(output_path, "Results_chr", Chromosome, "_task", Task, "_perm.txt"), collapse="")                    
-write.table(results, output_file, row.names=FALSE, sep="\t", quote=FALSE)
+write.table(results, output_file)
+#write.table(results, output_file, row.names=FALSE, sep="\t", quote=FALSE)
+
 cat("Task finished\n")
 #Script.end.time <- Sys.time()
 #Script.duration <- difftime(Script.end.time, Script.start.time, units="hours")
