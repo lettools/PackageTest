@@ -24,37 +24,37 @@ The ASE file must contain the positions of the ASE sites, including the chromoso
 ### Format of samples file
 One column must contain the individual IDs, another, their sex and the third, the population to which they belong.
 ```
-#  ID        SEX    POP
-# HG00096    male    GBR
-# HG00097  female    GBR
-# HG00099  female    GBR
-# NA20827    male    TSI
+  ID        SEX    POP
+ HG00096    male    GBR
+ HG00097  female    GBR
+ HG00099  female    GBR
+ NA20827    male    TSI
 ```
 
 ### Format of legend file
 One column must contain the ID of the polymorphisms, another their position, and the final three the reference allele, alternative allele and type of polymorphism involved.
 ```
-#                    id     position    a0  a1   TYPE
-#           10:60515:C:T    60515       C   T   Biallelic_SNP
-#  rs148087467:60523:T:G    60523       T   G   Biallelic_SNP
-# rs147855157:61372:CA:C    61372       CA  C   Biallelic_INDEL
+                    id     position    a0  a1   TYPE
+           10:60515:C:T    60515       C   T   Biallelic_SNP
+  rs148087467:60523:T:G    60523       T   G   Biallelic_SNP
+ rs147855157:61372:CA:C    61372       CA  C   Biallelic_INDEL
 ```
 
 ### Format of haplotypes file
 Here, the 0 refers to the reference allele, and the 1, the alternative.
 ```
-#0 0 1 0 0 0 0 0 0 0
-#0 0 0 0 1 0 0 1 0 0
-#0 0 0 0 0 0 0 0 0 0
+0 0 1 0 0 0 0 0 0 0
+0 0 0 0 1 0 0 1 0 0
+0 0 0 0 0 0 0 0 0 0
 ```
 
 ### Format of ASE file
 One column for the chromosome, another for the position, another for the individual ID, two for the reference and alternative alleles, along with two more columns for their corresponding read counts.
 ```
-#  chr    end    ref    alt      Ind         refCount    altCount
-#  22   135032   G      A       HG00276       19            0
-#  22   135032   G      A       HG00282       12            0
-#  22   135032   G      A       NA11831       10            0
+  chr    end    ref    alt      Ind         refCount    altCount
+  22   135032   G      A       HG00276       19            0
+  22   135032   G      A       HG00282       12            0
+  22   135032   G      A       NA11831       10            0
 ```
 
 
