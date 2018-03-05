@@ -1,6 +1,6 @@
 # Package Test
 
-`PackageTest` is a package containing two functions that calculates statistical associations between the level of expression at ASE sites and the presence of *cis* sequence variants by applying running permutations of the input data and applying a generalized linear model (GLM) each time.
+`PackageTest` is a package containing two functions that calculates statistical associations between the level of expression at allele-specific expression (ASE) sites and the presence of *cis* sequence variants by running permutations of the input data and applying a generalized linear model (GLM) each time.
 
 
 ## Dependencies 
@@ -118,14 +118,14 @@ This function allows you to output .RData files to be used as input for the anal
 ### Arguments:
 1. Chromosome: Specify chromosome. Must be in the same format as that found in Ensembl. For example, if you are
 looking at chromosome 22, it would either be `Chromosome = 22` or simply `22`. If looking at the x chromosome,
-it would be `Chromosome="x"` or `"x"`
-2. ASE_file: Specify file containing allele-specific expression information
-3. legend_file: Specify legend file containing SNP IDs and position info etc
-4. haplotypes_file: Provide haplotypes corresponding to SNPs in legend file, for given individuals found in samples file
-5. Samples: File containing cohort information
-6. output_path: Directory path to save output files to
-7. Species: Select same species as cohort. Defaults to "hsapiens"
-8. EnsemblVersion: Specify version of Ensembl to download from. Defaults to NULL which is the most recent build
+it would be `Chromosome="x"` or `"x"`.
+2. ASE_file: Specify file containing allele-specific expression information.
+3. legend_file: Specify legend file containing SNP IDs and position info, etc.
+4. haplotypes_file: Provide haplotypes corresponding to SNPs in legend file, for given individuals found in samples file.
+5. Samples: File containing cohort information.
+6. output_path: Directory path to save output files to.
+7. Species: Select same species as cohort. Defaults to "hsapiens".
+8. EnsemblVersion: Specify version of Ensembl to download from. Defaults to NULL which is the most recent build.
 
 ### Examples:
 #### Downloading Ensembl information for chromosome 22 of hsapiens, using the build corresponding to the sample data
@@ -150,11 +150,11 @@ The RData files outputted from the function, Gen.input, can now be used to run t
 1. input_file: This is the RData file outputted from the first function, `Gen.input`.
 2. Task: This analysis is very computationally burdensome. To speed up the process it is an advantage to split it up into tasks that may be run on multiple nodes, concurrently.
 3. progress_path: The function allows checkpointing, which allows the program to be killed and picked up again at a later stage, without starting from the beginning. Checkpointing occurs everytime you start a new ASE site, assuming 2 hours have elapsed.
-4. numTasks: Select how many jobs/tasks to split the process up into. Defaults to 100
-5. Chromosome: Specify chromosome used in input file
+4. numTasks: Select how many jobs/tasks to split the process up into. Defaults to 100.
+5. Chromosome: Specify chromosome used in input file.
 6. numPerms: Select how many permutations to run. Along with splitting the process up into simultaneous tasks, this is the biggest factor in determining how long the analysis will take. However, the more permutations, in general and up until a point, the more precise and accurate the results may be; for example, if set to 100, the minimum p-value that can possibly be reached as a result of permutations, is 0.01. Defaults to 100,000.
-7. TSSwindow: The transcript start site window. This represents the distance over which nearby variants will be selected, either side of the transcript start site. Defaults to 500kb
-8. pval_threshold: There is a theoretical minimum p-value for each particular combination of reference and alternative alleles for a given set of individuals for a given nearby variant of an ASE site.  This parameter sets the upper limit. Default is 0.00005. In this example the model will not be run if it is not possible to reach a p-value as low as 0.00005, even theoretically.
+7. TSSwindow: The transcript start site window. This represents the distance over which nearby variants will be selected, either side of the transcript start site. Defaults to 500kb.
+8. pval_threshold: There is a theoretical minimum p-value for each particular combination of reference and alternative alleles for a given set of individuals for a given nearby variant of an ASE site.  This parameter sets the upper limit. Default is 0.00005. 
           
           
 ### Examples:
