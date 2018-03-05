@@ -55,8 +55,7 @@ The ASE file must contain the positions of the ASE sites, including the chromoso
 
 
 ## Functions
-1. `Gen.input`is a function to generate an input for the model to run. Separating out into two functions saves memory and greatly speeds up paralleldownload.file("https://www.dropbox.com/s/cjb7xsx0qvos0y4/sample_ASE.txt.gz?dl=1","sample_ASE.txt.gz")
-isation for what is a computationally demanding task in the second function. The input files are formatted, gene and transcript start site information added to the ASE file, and finally output in .RData format to be loaded into the second function.
+1. `Gen.input`is a function to generate an input for the model to run. Separating out into two functions saves memory and greatly speeds up parallelisation for what is a computationally demanding task in the second function. The input files are formatted, gene and transcript start site information added to the ASE file, and finally output in .RData format to be loaded into the second function.
 2. `Run.Model` is a function that allows you to measure statistical association between nearby regulatory variants and the level of expression at a heterozygous coding polymorphism, controlling for factors such as sex and population, by utilising a generalized linear model and applying permutations to the data in order to provide a robust p-value. As the function supports parallelisation, a number of .txt files equal to the number of tasks, `numTasks`, specified in the function will be outputted.  
 
 
