@@ -5,8 +5,7 @@
 #' @param input_file This is the RData file outputted from the first function, gen.input
 #' @param Task This analysis is very computationally burdensome. To speed up the process it is an advantage to split it up into tasks that may be run on multiple nodes, concurrently. 
 #' @param progress_path The function allows checkpointing, which allows the program to be killed and picked up again at a later stage, without starting from the beginning. Occurs every 2 hours
-#' @param output_path Specify path to save the results to
-#' @param numTasks Select how many jobs/tasks to split the process up into. Defaults to 1000
+#' @param numTasks Select how many jobs/tasks to split the process up into. Defaults to 100
 #' @param Chromosome Specify chromosome used in input file
 #' @param numPerms Select how many permutations to run. Along with splitting the process up into simultaneous tasks, this is the biggest factor in determining how long the analysis will take. However, the 
 #'more permutations, in general and up until a point, the more precise and accurate the results may be; for example, if set to 100, the minimum p-value that can possibly be reached as a result of 
@@ -38,7 +37,7 @@
 #'NB: The smallest possible p-value attainable as a result of running permutations is 1/numPerms. Hence, there is no advantage to setting the minimum p-value threshold to below this number.
 
 
-Run.Model <- function(input_file, Task, progress_path, numTasks=1000, Chromosome,
+Run.Model <- function(input_file, Task, progress_path, numTasks=100, Chromosome,
                       numPerms=100000, TSSwindow=500000, pval_threshold=0.00005)
 {
   progress_file = paste(c(progress_path, "progress_", Chromosome, "_task", Task, ".RData"), collapse="")
@@ -190,7 +189,7 @@ Run.Model <- function(input_file, Task, progress_path, numTasks=1000, Chromosome
   cat(paste(c(dim(hetCounts)[1], "ASE SNPs found associated with this TSS", "\n"), collapse=" ")) 
   
   # This is a checkpoint of results and which current ASE SNP on.
-  #progress_file <- paste(c("/exports/eddie/scratch/s1463821/package/progress_Chr", args[1], "_task", task,".RData"), collapse="")
+  progress_file <- paste(c(progress_path, "progress_Chr", Chromosome, "_task", task,".RData"), collapse="")
   # Check if the progress_file exists. 
   # If it does, check that it is above a size of zero, or it will produce errors
   # If it doesn't, create it. 
