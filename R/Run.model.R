@@ -44,7 +44,7 @@ Run.Model <- function(input_file, Task, progress_path, numTasks=100, Chromosome,
   
   # Model to run analysis
   
-  tryCatch(library(GenomicRanges))
+  tryCatch(library(GenomicRangesf))
   library(GenomicRanges)
   library(reshape2)
   library(rtracklayer)
