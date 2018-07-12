@@ -8,3 +8,10 @@ Depends:
 License: What license is it under?
 LazyData: true
 RoxygenNote: 5.0.0
+Imports:
+  GenomicRanges,
+  plyr,
+  reshape2,
+  rtracklayer,
+  speedglm,
+  stringr
