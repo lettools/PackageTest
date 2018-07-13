@@ -163,7 +163,7 @@ readInputs<-function(thisFile, type)
       stop("input file does not contain the correct column names. Legend file must be in the format shown above.")
       
     } else {
-      cat(type, "file successfully loaded")
+      cat(type, "file successfully loaded\n")
     }
   } else {
     stop(paste("Couldnt find specified ", type," file at: ", getwd(), "/", thisFile, sep=""))
