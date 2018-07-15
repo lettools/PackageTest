@@ -62,8 +62,7 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, Sample
     cat("\nAll packages loaded\n")
     
     # 5. Set your results dataframe
-    colHead<-c("id", "end", "Ind", "colnames(stat)", "(Intercept)_stat", "Reads_stat", "SEXmale_stat", "POPFIN_stat", "POPGBR_stat", "POPTSI_stat", "Variant_stat", "(Intercept)_p", "Reads_p", "SEXmale_
-               p", "POPFIN_p", "POPGBR_p", "POPTSI_p", "Variant_p", "TSS", "Gene.x")
+    colHead<-c("id", "end", "Ind", "colnames(stat)", "(Intercept)_stat", "Reads_stat", "SEXmale_stat", "POPFIN_stat", "POPGBR_stat", "POPTSI_stat", "Variant_stat", "(Intercept)_p", "Reads_p", "SEXmale_p", "POPFIN_p", "POPGBR_p", "POPTSI_p", "Variant_p", "TSS", "Gene.x")
     
     # 6. Load input files                                 
     Samples<-read.table(Samples_file, header=T)
