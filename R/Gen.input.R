@@ -62,21 +62,21 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, sample
   Samples<-readInputs(samples_file, "samples")
   LEG<-readInputs(legend_file, "legend")
   ASE<-readInputs(ASE_file, "allele counts")
+  hap<-readInputs(haplotypes_file, "haplotypes")
+  #ADD code to remove sites in ASE site not recorded as hets in hap file.
   
-
-  # haplotypes_file <- "/exports/eddie/scratch/s1463821/1000GP_Phase3.EUR.chr22.noFixed.hap.gz"  
-  hap<-read.table(haplotypes_file, header=F)
-  print("haplotypes file loaded")
   if (nrow(LEG) != nrow(hap))
   {
     stop("Haplotype and legend files do not contain the same number of rows")
   }
   if ((ncol(hap)/2) != nrow(Samples))
   {
-    stop("Must be two haplotypes per sample individual i.e. twice as many hap columns as Sample rows")
+    stop("Must be two haplotypes per sample individual i.e. twice as many columns in the haplotype file as individuals in the samples file.")
   }
   colnames(hap)<-rep(Samples$ID,each=2)
   rownames(hap)<-LEG$id
+  
+  ######SHOULDNT ENFORCE THIS COLUMN
   LEG<-LEG[which(LEG$TYPE=="Biallelic_SNP"),]
   colnames(LEG)[c(2:4)]<-c("end", "ref", "alt")
   ASE_vars<-merge(ASE,LEG,by=c("end", "ref", "alt"), all.x=FALSE, all.y=FALSE)
@@ -104,22 +104,23 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, sample
                             geneid=ensembl$ensembl_gene_id, TSS=ensembl$transcript_start, strand= ensembl$strand)
   
   ASE_varsmerge <-  GRanges(seqnames=
-                              Rle(rep(as.character(Chromosome), each=dim(ASE_vars)[1])),
+                              Rle(ASE_vars$chr),
                             ranges = IRanges(start=ASE_vars$end, end=ASE_vars$end), names=ASE_vars$id)
   
   merge <- mergeByOverlaps(ASE_varsmerge,ensemblmerge)
   # MAY NEED TO CHANGE COLUMN NAMES. COULD JUST DO NUMBERS AND SAY WHAT EACH NUMBER CORRESPONDS TO IN A HELP FILE
   
-  #find out which snps are not found in my merge and so are without a tss
+  #MAYBE SHOULD MAKE DOING ASE SITES OUTSIDE A KNOWN GENE A SEPARATE OPTION
+  #find out which snps are not found in my merge and so are without a known tss
   find_snps_without_tss <- which(!(ASE_vars$id %in% merge$names))
   #Pull them out of the metric file which also has their positions
   snps_without_tss <- ASE_vars[find_snps_without_tss,]
   #Do another merge in the same form as the previous one
-  ensemblmerge <-   GRanges(seqnames= Rle(rep(as.character(Chromosome), each=dim(snps_without_tss)[1])),
+  ensemblmerge <-   GRanges(seqnames= Rle(snps_without_tss$chr),
                             ranges = IRanges(start=snps_without_tss$end, end=snps_without_tss$end, names=snps_without_tss$id),
                             geneid=snps_without_tss$id, TSS=snps_without_tss$end, strand= snps_without_tss$strand)
   ASE_varsmerge <-  GRanges(seqnames=
-                              Rle(rep(as.character(Chromosome), each=dim(snps_without_tss)[1])),
+                              Rle(snps_without_tss$chr),
                             ranges = IRanges(start=snps_without_tss$end, end=snps_without_tss$end), names=snps_without_tss$id)
   #Combine the snps without tss with those of a tss to test them all later
   merge2 <- mergeByOverlaps(ASE_varsmerge,ensemblmerge)
@@ -128,22 +129,37 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, sample
   # Add the TSS and geneid information to the ASE_vars df
   newdf <- data.frame(id=completemerge$id, TSS=completemerge$TSS, Gene=completemerge$geneid)
   # This merge takes a while
-  print("Now merging")
+  cat("Now merging\n")
   ASE_vars <- merge(newdf, ASE_vars, by = "id")
   ASE_vars<-ASE_vars[!duplicated(ASE_vars[,c("Ind", "id")]),]
+  ASE_vars$propRef<-ASE_vars$refCount/(ASE_vars$refCount+ASE_vars$altCount)
+  ASE_vars$totalReads<-rowSums(ASE_vars[,c("refCount","altCount")])
+  ASE_vars$logRatio<-log2((ASE_vars$refCount+1)/(ASE_vars$altCount+1))
+  ASE_vars$binomp<-mapply(Fun, ASE_vars$refCount, ASE_vars$refCount+ASE_vars$altCount, median(ASE_vars$propRef))
   cat("Merge complete\n")
   output_file = paste(c(output_path, "Run.model.input_Chr",  Chromosome, ".RData"), collapse="")
-  print(paste(c("Saving ", output_file), collapse=""))
+  cat(paste(c("Saving ", output_file), collapse=""))
   
   save(list = ls(all.names = TRUE), file = output_file, envir = environment())
-  print("Finished")
+  cat("Finished")
 }  
+
+
+applyBinom<-function (x,n, p){
+  binom.test(x,n, p)$p.value
+}
+
 
 readInputs<-function(thisFile, type)
 {
   if(file.exists(thisFile))
   {
-    thisData<-read.table(thisFile, stringsAsFactors = F, header=T)
+    if(type == "haplotypes")
+    {
+      thisData<-read.table(thisFile, header=F)  
+    } else {
+      thisData<-read.table(thisFile, stringsAsFactors = F, header=T)
+    }
     cols <- colnames(thisData)
     #lets change samples file so can take any number of different covariates
     #do we need the ref and alt alleles in ASE file? Best to keep required columns to a minimum
@@ -162,6 +178,8 @@ readInputs<-function(thisFile, type)
       print(LEG_example)
       stop("input file does not contain the correct column names. Legend file must be in the format shown above.")
       
+    } else if(type=="haplotypes" & (length(which(hap != 0 & hap != 1)) > 0)) {
+      stop("Error: Haplotype file contains values other than 0 or 1.")
     } else {
       cat(type, "file successfully loaded\n")
     }
