@@ -31,8 +31,16 @@ plotASEMetrics<-function(individuals=NULL, genes=NULL, variants=NULL)
                  color="red", linetype="dashed", size=1) + xlab("Proportion of reads carrying reference allele") +
       geom_density(alpha=.2, fill="#FF6666") + theme_pubr()
     p2<-ggplot(thisASE, aes(x=logRatio, y=totalReads)) +
-      geom_point() + theme_pubr() + xlab("Log2 ratio ((Ref. reads + 1)/(Alt. reads +1))") + ylab("Total number of reads") +
-      scale_y_continuous(trans='log10')
+      #geom_point(aes(colour=cut(binomp, c(0,0.01,0.05,1)))) + theme_pubr() + xlab("Log2 ratio ((Ref. reads + 1)/(Alt. reads +1))") + ylab("Total number of reads") +
+      geom_point(aes(colour=-log10(binomp))) +
+      #scale_y_continuous(trans='log10') +
+      scale_colour_gradient2(low = "cornflowerblue", mid = "orange",
+                           high = "red", midpoint = 1,space="Lab")
+      #scale_color_manual(name = "Binomial P value",
+      #                   values = c("(0.05,1]" = "cornflowerblue",
+      #                              "(0.01,0.05]" = "orange",
+      #                              "(0,0.01]" = "red"),
+      #                   labels = c("<= 0.01", "0.01 < P <= 0.05", "> 0.05"))
     annotate_figure(ggarrange(p1,p2), top=title)
   } else {
     stop("No data left to plot. Did you specify valid ids?")

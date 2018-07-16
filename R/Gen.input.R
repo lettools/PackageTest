@@ -135,7 +135,14 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, sample
   ASE_vars$propRef<-ASE_vars$refCount/(ASE_vars$refCount+ASE_vars$altCount)
   ASE_vars$totalReads<-rowSums(ASE_vars[,c("refCount","altCount")])
   ASE_vars$logRatio<-log2((ASE_vars$refCount+1)/(ASE_vars$altCount+1))
-  ASE_vars$binomp<-mapply(Fun, ASE_vars$refCount, ASE_vars$refCount+ASE_vars$altCount, median(ASE_vars$propRef))
+  
+  expectedRatio <- 0.5
+  if(length(ASE_vars$propRef > 1000))
+  {
+    expectedRatio <- median(ASE_vars$propRef)
+  }
+  cat("Setting expected proportion of reference reads to ", expectedRatio, "in binomial test")
+  ASE_vars$binomp<-mapply(applyBinom, ASE_vars$refCount, ASE_vars$refCount+ASE_vars$altCount, expectedRatio)
   cat("Merge complete\n")
   output_file = paste(c(output_path, "Run.model.input_Chr",  Chromosome, ".RData"), collapse="")
   cat(paste(c("Saving ", output_file), collapse=""))
@@ -178,7 +185,7 @@ readInputs<-function(thisFile, type)
       print(LEG_example)
       stop("input file does not contain the correct column names. Legend file must be in the format shown above.")
       
-    } else if(type=="haplotypes" & (length(which(hap != 0 & hap != 1)) > 0)) {
+    } else if(type=="haplotypes" & (length(which(thisData != 0 & thisData != 1)) > 0)) {
       stop("Error: Haplotype file contains values other than 0 or 1.")
     } else {
       cat(type, "file successfully loaded\n")
