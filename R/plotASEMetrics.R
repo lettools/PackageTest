@@ -24,24 +24,34 @@ plotASEMetrics<-function(individuals=NULL, genes=NULL, variants=NULL)
     cat("\t", numVar, "variants\n")
     cat("\t", numGenes, "genes\n")
     
-    title<-paste("Allelic imbalances across ", numInd, " individuals, ", numGenes, " genes and ", numVar, " variants (", numNA, " outside known genes)", sep="")
-    p1<-ggplot(thisASE, aes(x=propRef)) +
+    title<-paste("ASE metrics across ", numInd, " individuals, ", numGenes, " genes and ", numVar, " variants (", numNA, " outside known genes)", sep="")
+    
+    hetCounts<-sort(table(thisASE$id))
+    hetCountsRank<-cbind.data.frame(Individuals=hetCounts, Rank=1:length(hetCounts))
+    p1<-ggplot(hetCountsRank, aes(x=Rank, y=Individuals.Freq)) +
+      geom_point() + scale_y_continuous(trans='log10') + annotation_logticks(scaled = TRUE,sides = "lr") + 
+      xlab("Rank of variant") + ylab("Number of heterozygote individuals") + theme_pubr()
+    
+    #rather convoluted command to get variant counts by gene
+    geneCounts<-table(unique(thisASE[complete.cases(thisASE[,c("id","Gene.y")]),c("id","Gene.y")])$Gene.y)
+    geneCountsRank<-cbind.data.frame(Genes=geneCounts, Rank=1:length(geneCounts))
+    p2<-ggplot(geneCountsRank, aes(x=Rank, y=Genes.Freq)) +
+      geom_point() + scale_y_continuous(trans='log10') + annotation_logticks(scaled = TRUE,sides = "lr") + 
+      xlab("Rank of gene") + ylab("Number of heterozygote variants") + theme_pubr()
+    
+    p3<-ggplot(thisASE, aes(x=propRef)) +
       geom_histogram(aes(y=..density..),binwidth=.05, colour="black", fill="white") +
       geom_vline(aes(xintercept=median(propRef, na.rm=T)),   # Ignore NA values for median
                  color="red", linetype="dashed", size=1) + xlab("Proportion of reads carrying reference allele") +
       geom_density(alpha=.2, fill="#FF6666") + theme_pubr()
-    p2<-ggplot(thisASE, aes(x=logRatio, y=totalReads)) +
-      #geom_point(aes(colour=cut(binomp, c(0,0.01,0.05,1)))) + theme_pubr() + xlab("Log2 ratio ((Ref. reads + 1)/(Alt. reads +1))") + ylab("Total number of reads") +
-      geom_point(aes(colour=-log10(binomp))) +
-      #scale_y_continuous(trans='log10') +
-      scale_colour_gradient2(low = "cornflowerblue", mid = "orange",
-                           high = "red", midpoint = 1,space="Lab")
-      #scale_color_manual(name = "Binomial P value",
-      #                   values = c("(0.05,1]" = "cornflowerblue",
-      #                              "(0.01,0.05]" = "orange",
-      #                              "(0,0.01]" = "red"),
-      #                   labels = c("<= 0.01", "0.01 < P <= 0.05", "> 0.05"))
-    annotate_figure(ggarrange(p1,p2), top=title)
+    
+    p4<-ggplot(thisASE, aes(x=logRatio, y=totalReads)) +
+      geom_point(aes(colour=-log10(binomp))) + theme_pubr() + 
+      xlab("Log2 ratio ((Ref. reads + 1)/(Alt. reads +1))") + ylab("Total number of reads") +
+      scale_y_continuous(trans='log10') +
+      scale_colour_gradientn(name = "-log10(Binomial P value)",colors=c("cornflowerblue","orange", "red"), values=c(0,2/max(-log10(ASE_vars$binomp)),1))
+      
+    annotate_figure(ggarrange(p1,p2,p3,p4), top=title)
   } else {
     stop("No data left to plot. Did you specify valid ids?")
   }

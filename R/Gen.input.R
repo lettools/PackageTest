@@ -141,14 +141,14 @@ Gen.input <- function(Chromosome, ASE_file, legend_file, haplotypes_file, sample
   {
     expectedRatio <- median(ASE_vars$propRef)
   }
-  cat("Setting expected proportion of reference reads to ", expectedRatio, "in binomial test")
+  cat("Setting expected proportion of reference reads to ", expectedRatio, "in binomial test\n")
   ASE_vars$binomp<-mapply(applyBinom, ASE_vars$refCount, ASE_vars$refCount+ASE_vars$altCount, expectedRatio)
   cat("Merge complete\n")
   output_file = paste(c(output_path, "Run.model.input_Chr",  Chromosome, ".RData"), collapse="")
-  cat(paste(c("Saving ", output_file), collapse=""))
+  cat(paste(c("Saving ", output_file, "\n"), collapse=""))
   
   save(list = ls(all.names = TRUE), file = output_file, envir = environment())
-  cat("Finished")
+  cat("Finished\n")
 }  
 
 
