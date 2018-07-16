@@ -12,6 +12,8 @@ biocViews:
 Depends:
   biomaRt,
   GenomicRanges,
+  ggplot2,
+  ggpubr,
   plyr,
   reshape2,
   rtracklayer,
