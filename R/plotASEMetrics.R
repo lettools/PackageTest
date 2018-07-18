@@ -1,19 +1,19 @@
-plotASEMetrics<-function(individuals=NULL, genes=NULL, variants=NULL)
+plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
 {
-  thisASE<-ASE_vars
+  thisASE<-input$ASE
   if(!is.null(individuals))
   {
-    thisASE<-ASE_vars[which(ASE_vars$Ind %in% individuals),]
+    thisASE<-input$ASE[which(input$ASE$Ind %in% individuals),]
   }
   if(!is.null(genes))
   {
-    thisASE<-ASE_vars[which(ASE_vars$Gene.y %in% genes),]
+    thisASE<-input$ASE[which(input$ASE$Gene.y %in% genes),]
   }
   if(!is.null(variants))
   {
-    thisASE<-ASE_vars[which(ASE_vars$id %in% variants),]
+    thisASE<-input$ASE[which(input$ASE$id %in% variants),]
   }
-  if(dim(ASE_vars)[1] > 0)
+  if(dim(input$ASE)[1] > 0)
   {
     numInd<-length(unique(thisASE$Ind))
     numVar<-length(unique(thisASE$id))
@@ -27,7 +27,10 @@ plotASEMetrics<-function(individuals=NULL, genes=NULL, variants=NULL)
     title<-paste("ASE metrics across ", numInd, " individuals, ", numGenes, " genes and ", numVar, " variants (", numNA, " outside known genes)", sep="")
     
     hetCounts<-sort(table(thisASE$id))
+    #check plotting when only one SNP
+    hetCounts<-as.vector(hetCounts[which(hetCounts>0)])
     hetCountsRank<-cbind.data.frame(Individuals=hetCounts, Rank=1:length(hetCounts))
+    colnames(hetCountsRank)<-c("Individuals.Freq", "Rank")
     p1<-ggplot(hetCountsRank, aes(x=Rank, y=Individuals.Freq)) +
       geom_point() + scale_y_continuous(trans='log10') + annotation_logticks(scaled = TRUE,sides = "lr") + 
       xlab("Rank of variant") + ylab("Number of heterozygote individuals") + theme_pubr()
@@ -49,7 +52,7 @@ plotASEMetrics<-function(individuals=NULL, genes=NULL, variants=NULL)
       geom_point(aes(colour=-log10(binomp))) + theme_pubr() + 
       xlab("Log2 ratio ((Ref. reads + 1)/(Alt. reads +1))") + ylab("Total number of reads") +
       scale_y_continuous(trans='log10') +
-      scale_colour_gradientn(name = "-log10(Binomial P value)",colors=c("cornflowerblue","orange", "red"), values=c(0,2/max(-log10(ASE_vars$binomp)),1))
+      scale_colour_gradientn(name = "-log10(Binomial P value)",colors=c("cornflowerblue","orange", "red"), values=c(0,2/max(-log10(thisASE$binomp)),1))
       
     annotate_figure(ggarrange(p1,p2,p3,p4), top=title)
   } else {

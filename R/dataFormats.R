@@ -1,5 +1,5 @@
 #example sample data
-ID <- c("HG00096", "HG00097", "HG00099", "NA20827") 
+Ind <- c("HG00096", "HG00097", "HG00099", "NA20827") 
 SEX <- c("male", "female", "female", "male")
 POP <- c("GBR", "GBR", "GBR", "TSI")
 sample_example <- data.frame(ID, SEX, POP) 
@@ -16,9 +16,8 @@ altCount <- c(0,0,0)
 ASE_example <- data.frame(chr, start, end, ref, alt, Ind, refCount, altCount)
 
 #example legend data
-id <- c("10:60515:C:T", "rs148087467:60523:T:G", "rs147855157:61372:CA:C")
-position <- c(60515, 60523, 61372)
-a0 <- c("C", "T", "CA")
-a1 <- c("T", "G", "C")
-TYPE <- c("Biallelic_SNP", "Biallelic_SNP", "Biallelic_INDEL")
-LEG_example <- data.frame(id, position, a0, a1, TYPE)
+ID <- c("10:60515:C:T", "rs148087467:60523:T:G", "rs147855157:61372:CA:C")
+pos <- c(60515, 60523, 61372)
+allele0 <- c("C", "T", "CA")
+allele1 <- c("T", "G", "C")
+LEG_example <- data.frame(ID, pos, allele0, allele1)
