@@ -91,7 +91,8 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
   ASE_vars<-merge(ASE,LEG,by=c("end", "ref", "alt"), all.x=FALSE, all.y=FALSE)
   ASE_vars<-merge(ASE_vars,Samples, by="Ind", all.x=FALSE, all.y=FALSE)
   #ASE_vars<-merge(ASE_vars, counts, by.x="Ind", by.y="ID", all.x=FALSE, all.y=FALSE)
-  #some SNPs appear twice in ASE input when overlapping two genes
+  #some SNPs appear twice in ASE input when overlapping two genes.
+  #may want to change this if doing gene level analysis
   ASE_vars<-ASE_vars[!duplicated(ASE_vars[,c("Ind", "ID")]),]
   
   
@@ -119,46 +120,42 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
   merge <- mergeByOverlaps(ASE_varsmerge,ensemblmerge)
   # MAY NEED TO CHANGE COLUMN NAMES. COULD JUST DO NUMBERS AND SAY WHAT EACH NUMBER CORRESPONDS TO IN A HELP FILE
   
-  #MAYBE SHOULD MAKE DOING ASE SITES OUTSIDE A KNOWN GENE A SEPARATE OPTION
+  
   #find out which snps are not found in my merge and so are without a known tss
-  find_snps_without_tss <- which(!(ASE_vars$id %in% merge$names))
   #Pull them out of the metric file which also has their positions
-  snps_without_tss <- ASE_vars[find_snps_without_tss,]
-  #Do another merge in the same form as the previous one
-  ensemblmerge <-   GRanges(seqnames= Rle(snps_without_tss$chr),
-                            ranges = IRanges(start=snps_without_tss$end, end=snps_without_tss$end, names=snps_without_tss$id),
-                            geneid=snps_without_tss$id, TSS=snps_without_tss$end, strand= snps_without_tss$strand)
-  ASE_varsmerge <-  GRanges(seqnames=
-                              Rle(snps_without_tss$chr),
-                            ranges = IRanges(start=snps_without_tss$end, end=snps_without_tss$end), names=snps_without_tss$id)
-  #Combine the snps without tss with those of a tss to test them all later
-  merge2 <- mergeByOverlaps(ASE_varsmerge,ensemblmerge)
-  completemerge <- rbind (merge,merge2)
-  colnames(completemerge)[2] <- "id"
+  snps_without_tss <- ASE_vars[which(!(ASE_vars$ID %in% merge$names)),]
+  
   # Add the TSS and geneid information to the ASE_vars df
-  newdf <- data.frame(id=completemerge$id, TSS=completemerge$TSS, Gene=completemerge$geneid)
+  inGenes <- data.frame(ID=merge$names, TSS=merge$TSS, Gene=merge$geneid)
+  outsideGenes<-data.frame(ID=snps_without_tss$ID, TSS=snps_without_tss$end, Gene=snps_without_tss$ID)
+  inGenes<-inGenes[!duplicated(inGenes),]
+  outsideGenes<-inGenes[!duplicated(outsideGenes),]
+  annoDF<-rbind.data.frame(inGenes, outsideGenes)
   # This merge takes a while
   cat("Now merging\n")
-  ASE_vars <- merge(newdf, ASE_vars, by = "id")
-  ASE_vars<-ASE_vars[!duplicated(ASE_vars[,c("Ind", "id")]),]
-  ASE_vars$propRef<-ASE_vars$refCount/(ASE_vars$refCount+ASE_vars$altCount)
-  ASE_vars$totalReads<-rowSums(ASE_vars[,c("refCount","altCount")])
-  ASE_vars$logRatio<-log2((ASE_vars$refCount+1)/(ASE_vars$altCount+1))
+  ASEGenes<-left_join(ASE_vars, annoDF, by="ID")
+  #################
+  #removing redundancy here but possible this is going to cause problems if doing gene level analyses
+  #################
+  ASEGenes<-ASEGenes[!duplicated(ASEGenes[,c("Ind", "ID")]),]
+  ASEGenes$propRef<-ASEGenes$refCount/(ASEGenes$refCount+ASEGenes$altCount)
+  ASEGenes$totalReads<-rowSums(ASEGenes[,c("refCount","altCount")])
+  ASEGenes$logRatio<-log2((ASEGenes$refCount+1)/(ASEGenes$altCount+1))
   
   expectedRatio <- 0.5
-  if(length(ASE_vars$propRef > 1000))
+  if(length(ASEGenes$propRef > 1000))
   {
-    expectedRatio <- median(ASE_vars$propRef)
+    expectedRatio <- median(ASEGenes$propRef)
   }
   cat("Setting expected proportion of reference reads to ", expectedRatio, "in binomial test\n")
-  ASE_vars$binomp<-mapply(applyBinom, ASE_vars$refCount, ASE_vars$refCount+ASE_vars$altCount, expectedRatio)
+  ASEGenes$binomp<-mapply(applyBinom, ASEGenes$refCount, ASEGenes$refCount+ASEGenes$altCount, expectedRatio)
   cat("Merge complete\n")
   output_file = paste(c(output_path, "Run.model.input_Chr",  Chromosome, ".RData"), collapse="")
   cat(paste(c("Saving ", output_file, "\n"), collapse=""))
   
   save(list = ls(all.names = TRUE), file = output_file, envir = environment())
   cat("Finished\n")
-  dataList<-list(haps=hap, ASE=ASE_vars)
+  dataList<-list(haps=hap, ASE=ASEGenes)
   return(dataList)
 }  
 

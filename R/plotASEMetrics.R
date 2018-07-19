@@ -11,14 +11,14 @@ plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
   }
   if(!is.null(variants))
   {
-    thisASE<-input$ASE[which(input$ASE$id %in% variants),]
+    thisASE<-input$ASE[which(input$ASE$ID %in% variants),]
   }
   if(dim(input$ASE)[1] > 0)
   {
     numInd<-length(unique(thisASE$Ind))
-    numVar<-length(unique(thisASE$id))
+    numVar<-length(unique(thisASE$ID))
     numGenes<-length(unique(thisASE$Gene.y[!is.na(thisASE$Gene.y)]))
-    numNA<-length(unique(thisASE$id[is.na(thisASE$Gene.y)]))
+    numNA<-length(unique(thisASE$ID[is.na(thisASE$Gene.y)]))
     cat("Numbers after filtering:\n")
     cat("\t", numInd, "individuals\n")
     cat("\t", numVar, "variants\n")
@@ -26,7 +26,7 @@ plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
     
     title<-paste("ASE metrics across ", numInd, " individuals, ", numGenes, " genes and ", numVar, " variants (", numNA, " outside known genes)", sep="")
     
-    hetCounts<-sort(table(thisASE$id))
+    hetCounts<-sort(table(thisASE$ID), decreasing = TRUE)
     #check plotting when only one SNP
     hetCounts<-as.vector(hetCounts[which(hetCounts>0)])
     hetCountsRank<-cbind.data.frame(Individuals=hetCounts, Rank=1:length(hetCounts))
@@ -36,8 +36,8 @@ plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
       xlab("Rank of variant") + ylab("Number of heterozygote individuals") + theme_pubr()
     
     #rather convoluted command to get variant counts by gene
-    geneCounts<-table(unique(thisASE[complete.cases(thisASE[,c("id","Gene.y")]),c("id","Gene.y")])$Gene.y)
-    geneCountsRank<-cbind.data.frame(Genes=geneCounts, Rank=1:length(geneCounts))
+    geneCounts<-table(as.character(unique(thisASE[complete.cases(thisASE[,c("ID","Gene.y")]),c("ID","Gene.y")])$Gene.y))
+    geneCountsRank<-cbind.data.frame(Genes=sort(geneCounts, decreasing = TRUE), Rank=1:length(geneCounts))
     p2<-ggplot(geneCountsRank, aes(x=Rank, y=Genes.Freq)) +
       geom_point() + scale_y_continuous(trans='log10') + annotation_logticks(scaled = TRUE,sides = "lr") + 
       xlab("Rank of gene") + ylab("Number of heterozygote variants") + theme_pubr()
@@ -48,11 +48,13 @@ plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
                  color="red", linetype="dashed", size=1) + xlab("Proportion of reads carrying reference allele") +
       geom_density(alpha=.2, fill="#FF6666") + theme_pubr()
     
+    logTransBi<--log10(thisASE$binomp)
+    maxLogP<-max(logTransBi[is.finite(logTransBi)])
     p4<-ggplot(thisASE, aes(x=logRatio, y=totalReads)) +
-      geom_point(aes(colour=-log10(binomp))) + theme_pubr() + 
+      geom_point(aes(colour=-log10(binomp+1e-300))) + theme_pubr() + 
       xlab("Log2 ratio ((Ref. reads + 1)/(Alt. reads +1))") + ylab("Total number of reads") +
       scale_y_continuous(trans='log10') +
-      scale_colour_gradientn(name = "-log10(Binomial P value)",colors=c("cornflowerblue","orange", "red"), values=c(0,2/max(-log10(thisASE$binomp)),1))
+      scale_colour_gradientn(name = "-log10(Binomial P value)",colors=c("cornflowerblue","orange", "red"), values=c(0,3/maxLogP,1))
       
     annotate_figure(ggarrange(p1,p2,p3,p4), top=title)
   } else {

@@ -2,7 +2,7 @@
 Ind <- c("HG00096", "HG00097", "HG00099", "NA20827") 
 SEX <- c("male", "female", "female", "male")
 POP <- c("GBR", "GBR", "GBR", "TSI")
-sample_example <- data.frame(ID, SEX, POP) 
+sample_example <- data.frame(Ind, SEX, POP) 
 
 #example allele counts data
 chr <- c(22,22,22)
