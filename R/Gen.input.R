@@ -32,7 +32,7 @@
 
 
 # 1. What you put into the command line
-Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, output_path,
+Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, output_filename,
                       species="hsapiens", ensembl_version=NULL)
 {
   # 2. For timing length of script                                                                                                  
@@ -52,9 +52,10 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
     cat(paste(c("              ensembl version: ", "latest build", "\n"), collapse=""))
   }    
   
-  # 5. Set your results dataframe
-  colHead<-c("id", "end", "Ind", "colnames(stat)", "(Intercept)_stat", "Reads_stat", "SEXmale_stat", "POPFIN_stat", "POPGBR_stat", "POPTSI_stat", "Variant_stat", "(Intercept)_p", "Reads_p", "SEXmale_
-               p", "POPFIN_p", "POPGBR_p", "POPTSI_p", "Variant_p", "TSS", "Gene.x")
+  dir.create("PackageTestWork", showWarnings=FALSE) 
+  dir.create("PackageTestWork/RDataFiles", showWarnings=FALSE)
+  dir.create("PackageTestWork/ModelResults", showWarnings=FALSE)
+  dir.create("PackageTestWork/ProgressFiles", showWarnings=FALSE)
   
   # 6. Load input files     
   ASE<-readInputs(ASE_file, "allele counts")
@@ -146,13 +147,13 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
   {
     expectedRatio <- median(ASEGenes$propRef)
   }
-  cat("Setting expected proportion of reference reads to ", expectedRatio, "in binomial test\n")
+  cat("Setting expected proportion of reference reads to", expectedRatio, "in binomial test\n")
   ASEGenes$binomp<-mapply(applyBinom, ASEGenes$refCount, ASEGenes$refCount+ASEGenes$altCount, expectedRatio)
   cat("Merge complete\n")
-  output_file = paste(c(output_path, "Run.model.input_Chr",  Chromosome, ".RData"), collapse="")
+  output_file = paste(c(output_filename, ".RData"), collapse="")
   cat(paste(c("Saving ", output_file, "\n"), collapse=""))
   
-  save(list = ls(all.names = TRUE), file = output_file, envir = environment())
+  save(list = ls(all.names = TRUE), file = file.path("PackageTestWork/RDataFiles",output_file), envir = environment())
   cat("Finished\n")
   dataList<-list(haps=hap, ASE=ASEGenes)
   return(dataList)
