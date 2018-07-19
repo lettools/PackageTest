@@ -32,7 +32,7 @@
 
 
 # 1. What you put into the command line
-Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, output_filename,
+Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, output_prefix,
                       species="hsapiens", ensembl_version=NULL)
 {
   # 2. For timing length of script                                                                                                  
@@ -150,7 +150,7 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
   cat("Setting expected proportion of reference reads to", expectedRatio, "in binomial test\n")
   ASEGenes$binomp<-mapply(applyBinom, ASEGenes$refCount, ASEGenes$refCount+ASEGenes$altCount, expectedRatio)
   cat("Merge complete\n")
-  output_file = paste(c(output_filename, ".RData"), collapse="")
+  output_file = paste(c(output_prefix, ".RData"), collapse="")
   cat(paste(c("Saving ", output_file, "\n"), collapse=""))
   
   save(list = ls(all.names = TRUE), file = file.path("PackageTestWork/RDataFiles",output_file), envir = environment())
