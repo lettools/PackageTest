@@ -7,7 +7,7 @@ plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
   }
   if(!is.null(genes))
   {
-    thisASE<-input$ASE[which(input$ASE$Gene.y %in% genes),]
+    thisASE<-input$ASE[which(input$ASE$Gene %in% genes),]
   }
   if(!is.null(variants))
   {
@@ -17,8 +17,8 @@ plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
   {
     numInd<-length(unique(thisASE$Ind))
     numVar<-length(unique(thisASE$ID))
-    numGenes<-length(unique(thisASE$Gene.y[!is.na(thisASE$Gene.y)]))
-    numNA<-length(unique(thisASE$ID[is.na(thisASE$Gene.y)]))
+    numGenes<-length(unique(thisASE$Gene[!is.na(thisASE$Gene)]))
+    numNA<-length(unique(thisASE$ID[is.na(thisASE$Gene)]))
     cat("Numbers after filtering:\n")
     cat("\t", numInd, "individuals\n")
     cat("\t", numVar, "variants\n")
@@ -36,7 +36,7 @@ plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
       xlab("Rank of variant") + ylab("Number of heterozygote individuals") + theme_pubr()
     
     #rather convoluted command to get variant counts by gene
-    geneCounts<-table(as.character(unique(thisASE[complete.cases(thisASE[,c("ID","Gene.y")]),c("ID","Gene.y")])$Gene.y))
+    geneCounts<-table(as.character(unique(thisASE[complete.cases(thisASE[,c("ID","Gene")]),c("ID","Gene")])$Gene))
     geneCountsRank<-cbind.data.frame(Genes=sort(geneCounts, decreasing = TRUE), Rank=1:length(geneCounts))
     p2<-ggplot(geneCountsRank, aes(x=Rank, y=Genes.Freq)) +
       geom_point() + scale_y_continuous(trans='log10') + annotation_logticks(scaled = TRUE,sides = "lr") + 
@@ -51,7 +51,7 @@ plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
     logTransBi<--log10(thisASE$binomp)
     maxLogP<-max(logTransBi[is.finite(logTransBi)])
     p4<-ggplot(thisASE, aes(x=logRatio, y=totalReads)) +
-      geom_point(aes(colour=-log10(binomp+1e-300))) + theme_pubr() + 
+      geom_point(alpha = 1/10,aes(colour=-log10(binomp+1e-300))) + theme_pubr() + 
       xlab("Log2 ratio ((Ref. reads + 1)/(Alt. reads +1))") + ylab("Total number of reads") +
       scale_y_continuous(trans='log10') +
       scale_colour_gradientn(name = "-log10(Binomial P value)",colors=c("cornflowerblue","orange", "red"), values=c(0,3/maxLogP,1))
