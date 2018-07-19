@@ -39,7 +39,6 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
   Script.start.time <- Sys.time()
   # 3. Set your arguments. I will put a command that shows people what they have their arguments set to
   cat("\n\nARGUMENTS SET:\n")
-  cat(paste(c("              Chromosome:      ", Chromosome, "\n"), collapse=""))
   cat(paste(c("              ASE file:        ", ASE_file, "\n"), collapse=""))
   cat(paste(c("              legend file:     ", legend_file, "\n"), collapse=""))
   cat(paste(c("              haplotypes file: ", haplotypes_file, "\n"), collapse=""))
