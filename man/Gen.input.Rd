@@ -4,47 +4,44 @@
 \alias{Gen.input}
 \title{Generate model input}
 \usage{
-Gen.input(Chromosome, ASE_file, legend_file, haplotypes_file, Samples,
-  output_path, Species = "hsapiens", EnsemblVersion = NULL)
+Gen.input(ASE_file, legend_file, haplotypes_file, samples_file, output_prefix,
+  species = "hsapiens", ensembl_version = NULL)
 }
 \arguments{
-\item{Chromosome}{Specify chromosome}
-
 \item{ASE_file}{Specify file containing allele-specific expression information}
 
 \item{legend_file}{Specify legend file containing SNP IDs and position info etc}
 
 \item{haplotypes_file}{Provide haplotypes corresponding to SNPs in legend file, for given individuals found in samples file}
 
-\item{Samples}{File containing cohort information}
+\item{species}{Select same species as cohort. Defaults to "hsapiens"}
+
+\item{ensembl_version}{Specify version of Ensembl to download from. Defaults to NULL which is the most recent build}
+
+\item{samples}{File containing cohort information}
 
 \item{output_path}{Directory path to save output files to}
-
-\item{Species}{Select same species as cohort. Defaults to "hsapiens"}
-
-\item{EnsemblVersion}{Specify version of Ensembl to download from. Defaults to NULL which is the most recent build}
 }
 \description{
-This function allows you to output .RData files to be used as input for the analysis run in the second function.
+This function prepares the input files for downstream analysis including annotating variants according to genes within which they fall. An RData object is created so that this function only needs to be run once.
 }
 \examples{
-#Downloading Ensembl information for chromosome 22 of hsapiens, using the build corresponding to the sample data
-Gen.input(22, "path_to_ASE_file/ASEfile.txt.gz",
-                    "path_to_legend_file/file.legendfile.gz",
-                   "path_to_haplotypes_file/hapfile.hap.gz",
-                    "path_to_samples_file/samples.txt", EnsemblVersion=78)
-
-#Downloading Ensembl information for chromosome 22 of hsapiens, using the most recent build 
-Gen.input(22, "path_to_ASE_file/ASEfile.txt.gz",
+#' #Annotating the input files using the most recent human gene set 
+Gen.input("path_to_ASE_file/ASEfile.txt.gz",
                     "path_to_legend_file/file.legendfile.gz",
                    "path_to_haplotypes_file/hapfile.hap.gz",
                     "path_to_samples_file/samples.txt")
+                    
+#Annotating the input files using a previous human gene set
+Gen.input("path_to_ASE_file/ASEfile.txt.gz",
+                    "path_to_legend_file/file.legendfile.gz",
+                   "path_to_haplotypes_file/hapfile.hap.gz",
+                    "path_to_samples_file/samples.txt", ensembl_version=78)
 
-#Downloading Ensembl information for chromosome 1 of mmusculus, using the most recent build
-Gen.input(1, "path_to_ASE_file/ASEfile.txt.gz",
+#Annotating the input files using the most recent mouse gene set
+Gen.input("path_to_ASE_file/ASEfile.txt.gz",
                     "path_to_legend_file/file.legendfile.gz",
                   "path_to_haplotypes_file/hapfile.hap.gz",
                     "path_to_samples_file/samples.txt",
                     "mmusculus")
 }
-

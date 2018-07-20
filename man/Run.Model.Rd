@@ -4,8 +4,8 @@
 \alias{Run.Model}
 \title{Run Model}
 \usage{
-Run.Model(input_file, Task, progress_path, output_path, numTasks = 1000,
-  Chromosome, numPerms = 1e+05, TSSwindow = 5e+05, pval_threshold = 5e-05)
+Run.Model(input_file, Task, progress_path, numTasks = 100, Chromosome,
+  numPerms = 1e+05, TSSwindow = 5e+05, pval_threshold = 5e-05)
 }
 \arguments{
 \item{input_file}{This is the RData file outputted from the first function, gen.input}
@@ -14,9 +14,7 @@ Run.Model(input_file, Task, progress_path, output_path, numTasks = 1000,
 
 \item{progress_path}{The function allows checkpointing, which allows the program to be killed and picked up again at a later stage, without starting from the beginning. Occurs every 2 hours}
 
-\item{output_path}{Specify path to save the results to}
-
-\item{numTasks}{Select how many jobs/tasks to split the process up into. Defaults to 1000}
+\item{numTasks}{Select how many jobs/tasks to split the process up into. Defaults to 100}
 
 \item{Chromosome}{Specify chromosome used in input file}
 
@@ -55,4 +53,3 @@ Run.Model("input_file.RData", 2,
 
 NB: The smallest possible p-value attainable as a result of running permutations is 1/numPerms. Hence, there is no advantage to setting the minimum p-value threshold to below this number.
 }
-

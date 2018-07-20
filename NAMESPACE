@@ -2,3 +2,4 @@
 
 export(Gen.input)
 export(Run.Model)
+export(plotASEMetrics)

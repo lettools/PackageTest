@@ -46,9 +46,9 @@ plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
     numGenes<-length(unique(thisASE$Gene[!is.na(thisASE$Gene)]))
     numNA<-length(unique(thisASE$ID[is.na(thisASE$Gene)]))
     cat("Numbers after filtering:\n")
-    cat("\t", numInd, "individuals\n")
-    cat("\t", numVar, "variants\n")
-    cat("\t", numGenes, "genes\n")
+    cat("\t", numInd, "individual(s)\n")
+    cat("\t", numVar, "variant(s)\n")
+    cat("\t", numGenes, "gene(s)\n")
     
     title<-paste("ASE metrics across ", numInd, " individuals, ", numGenes, " genes and ", numVar, " variants (", numNA, " outside known genes)", sep="")
     
@@ -75,7 +75,7 @@ plotASEMetrics<-function(input, individuals=NULL, genes=NULL, variants=NULL)
     p3<-ggplot(thisASE, aes(x=propRef)) +
       geom_histogram(aes(y=..density..),binwidth=.05, colour="black", fill="white") +
       geom_vline(aes(xintercept=median(propRef, na.rm=T)),   # Ignore NA values for median
-                 color="red", linetype="dashed", size=1) + xlab("Proportion of reads carrying reference allele") +
+                 color="red", linetype="dashed", size=1) + xlab("Proportion of reads carrying reference allele") + ylab("Density of sites") +
       geom_density(alpha=.2, fill="#FF6666") + theme_pubr()
     
     logTransBi<--log10(thisASE$binomp)

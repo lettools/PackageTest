@@ -59,109 +59,7 @@ Run.Model <- function(input_file, Task, progress_path, numTasks=100, Chromosome,
   # All the input required for this chromosome (loads < 1 min, generally)
   load(file=input_file)
   print("Input file loaded")
-  getHetCounts<-function(set)
-  {
-    hetCountsAll<-aggregate(Ind~id+end+TSS+Gene.x, data=ASE_vars, FUN=length)
-    print(set)
-    hetCountsAll<-hetCountsAll[which(hetCountsAll$Ind > 10),]
-    set<-str_pad(as.numeric(set)-1, 2, pad = "0")       
-    # if (numTasks == 1000)
-    #{
-    #       set<-str_pad(as.numeric(set)-1, 3, pad = "0")
-    #} else if
-    #         { set<-str_pad(as.numeric(set)-1, 3, pad = "0")
-    #         } else if (numTasks=100) 
-    #                   { set<-str_pad(as.numeric(set)-1, 3, pad = "0")
-    #         
-    subHetCounts<-hetCountsAll[grepl(paste("^.+",set,"$", sep=""), hetCountsAll$TSS),]
-    return(subHetCounts)
-  }     
   
-  # Set functions
-  getFitStats<-function(fits)
-  { 
-    coeff_p<-data.frame()
-    #remove model fits that failed then check some are left
-    fits_NN<-fits[!sapply(fits,is.null)]
-    if(length(fits_NN) > 0)
-    {
-      stat<-sapply(fits_NN, function(f) {
-        c<-summary(f)$coefficients[,3]
-        if(is.factor(c))
-        {
-          as.numeric(levels(c))[c]
-        }
-        else
-        {
-          c
-        }
-      })
-      pvals<-sapply(fits_NN, function(f) {
-        p<-summary(f)$coefficients[,4]
-        if(is.factor(p))
-        {
-          as.numeric(levels(p))[p]
-        }
-        else
-        {
-          p
-        }
-      })
-      #get names of variants that didnt return null
-      testedVar<-sapply(fits_NN, function(f) attributes(summary(f)$terms)$variables[[6]])
-      colnames(stat)<-testedVar
-      colnames(pvals)<-testedVar
-      rownames(stat)<-paste(names(coef(fits_NN[[1]])), "_stat", sep="")
-      rownames(pvals)<-paste(names(coef(fits_NN[[1]])), "_p", sep="")
-      rownames(stat)[length(rownames(stat))]<-"Variant_stat"
-      rownames(pvals)[length(rownames(pvals))]<-"Variant_p"
-      coeff_p<-cbind.data.frame(hetCounts[i,],cbind.data.frame(colnames(stat),cbind.data.frame(t(stat),t(pvals))))
-      #add NAs for any missing columns
-      missingCols<-colHead[which(!(colHead %in% colnames(coeff_p)))]
-      coeff_p[,missingCols]<-"NA"
-      #order columns
-      coeff_p<-coeff_p[,colHead]
-    }
-    return(coeff_p)
-  }
-  
-  fitPerms<-function(exprGenos, nomResults, numPerm)
-  {
-    
-    #order nomResults so that can reorder after merge to maintain row positions
-    # COMMENTED OUT NEXT LINE
-    #nomResults<-nomResults[order(nomResults$"colnames(coeff)"),]
-    for(k in 1:numPerm)
-    {
-      vars<-colnames(exprGenos)[-c(1:6)]
-      fitsA <- lapply(vars, function(x) {tryCatch(speedglm(substitute(as.formula(paste("Count~Reads+SEX+POP+sample(",i,")", sep="")), list(i = x)), family=poisson(), data = exprGenos),error=function(e) NULL)
-      })
-      fitStats<-getFitStats(fitsA)
-      if(dim(fitStats)[1]>0)
-      {
-        fitStats$"colnames(stat)"<-gsub('sample\\(|\\)','',fitStats$"colnames(stat)")
-        
-        #get rows where have a valid permutation count so can increment just their counts
-        a<-which(nomResults$"colnames(stat)" %in% fitStats$"colnames(stat)")
-        nomResults$numPerm[a]<-nomResults$numPerm[a]+1
-        
-        
-        mergedStat<-join(nomResults[,c("colnames(stat)", "Variant_stat")], fitStats[,c("colnames(stat)", "Variant_stat")], by="colnames(stat)", type="left")
-        
-        #get rows where the permutation coefficent is greater than the nominal coefficent so can increment their counts
-        nomResults$numPermExceed[which(abs(mergedStat[,3]) >= abs(mergedStat[,2]))]<-nomResults$numPermExceed[which(abs(mergedStat[,3]) >= abs(mergedStat[,2]))]+1
-        
-        
-      }
-    }
-    return(nomResults)
-  }
-  fitModels<-function(exprGenos)
-  {
-    vars<-colnames(exprGenos)[-c(1:6)]
-    fitsA <- lapply(vars, function(x) {tryCatch(speedglm(substitute(Count~Reads+SEX+POP+i, list(i = as.name(x))), family=poisson(), data = exprGenos),error=function(e) NULL)})
-    return(getFitStats(fitsA))
-  }  
   #print(head(ASE_vars))
   # You have to set the task argument here if testing because loading in the image above resets the args to that of the image's
   # number tss should end in. (choose 10 to experiment on for chr 22. has 2 ASE SNPs)
@@ -298,3 +196,108 @@ Run.Model <- function(input_file, Task, progress_path, numTasks=100, Chromosome,
   #Script.duration <- difftime(Script.end.time, Script.start.time, units="hours")
   #cat(paste(c("Script took ", Script.duration[1], " minutes\n"), collapse="")) 
 } 
+
+getHetCounts<-function(set)
+{
+  hetCountsAll<-aggregate(Ind~id+end+TSS+Gene.x, data=ASE_vars, FUN=length)
+  print(set)
+  hetCountsAll<-hetCountsAll[which(hetCountsAll$Ind > 10),]
+  set<-str_pad(as.numeric(set)-1, 2, pad = "0")       
+  # if (numTasks == 1000)
+  #{
+  #       set<-str_pad(as.numeric(set)-1, 3, pad = "0")
+  #} else if
+  #         { set<-str_pad(as.numeric(set)-1, 3, pad = "0")
+  #         } else if (numTasks=100) 
+  #                   { set<-str_pad(as.numeric(set)-1, 3, pad = "0")
+  #         
+  subHetCounts<-hetCountsAll[grepl(paste("^.+",set,"$", sep=""), hetCountsAll$TSS),]
+  return(subHetCounts)
+}     
+
+# Set functions
+getFitStats<-function(fits)
+{ 
+  coeff_p<-data.frame()
+  #remove model fits that failed then check some are left
+  fits_NN<-fits[!sapply(fits,is.null)]
+  if(length(fits_NN) > 0)
+  {
+    stat<-sapply(fits_NN, function(f) {
+      c<-summary(f)$coefficients[,3]
+      if(is.factor(c))
+      {
+        as.numeric(levels(c))[c]
+      }
+      else
+      {
+        c
+      }
+    })
+    pvals<-sapply(fits_NN, function(f) {
+      p<-summary(f)$coefficients[,4]
+      if(is.factor(p))
+      {
+        as.numeric(levels(p))[p]
+      }
+      else
+      {
+        p
+      }
+    })
+    #get names of variants that didnt return null
+    testedVar<-sapply(fits_NN, function(f) attributes(summary(f)$terms)$variables[[6]])
+    colnames(stat)<-testedVar
+    colnames(pvals)<-testedVar
+    rownames(stat)<-paste(names(coef(fits_NN[[1]])), "_stat", sep="")
+    rownames(pvals)<-paste(names(coef(fits_NN[[1]])), "_p", sep="")
+    rownames(stat)[length(rownames(stat))]<-"Variant_stat"
+    rownames(pvals)[length(rownames(pvals))]<-"Variant_p"
+    coeff_p<-cbind.data.frame(hetCounts[i,],cbind.data.frame(colnames(stat),cbind.data.frame(t(stat),t(pvals))))
+    #add NAs for any missing columns
+    missingCols<-colHead[which(!(colHead %in% colnames(coeff_p)))]
+    coeff_p[,missingCols]<-"NA"
+    #order columns
+    coeff_p<-coeff_p[,colHead]
+  }
+  return(coeff_p)
+}
+
+fitPerms<-function(exprGenos, nomResults, numPerm)
+{
+  
+  #order nomResults so that can reorder after merge to maintain row positions
+  # COMMENTED OUT NEXT LINE
+  #nomResults<-nomResults[order(nomResults$"colnames(coeff)"),]
+  for(k in 1:numPerm)
+  {
+    vars<-colnames(exprGenos)[-c(1:6)]
+    fitsA <- lapply(vars, function(x) {tryCatch(speedglm(substitute(as.formula(paste("Count~Reads+SEX+POP+sample(",i,")", sep="")), list(i = x)), family=poisson(), data = exprGenos),error=function(e) NULL)
+    })
+    fitStats<-getFitStats(fitsA)
+    if(dim(fitStats)[1]>0)
+    {
+      fitStats$"colnames(stat)"<-gsub('sample\\(|\\)','',fitStats$"colnames(stat)")
+      
+      #get rows where have a valid permutation count so can increment just their counts
+      a<-which(nomResults$"colnames(stat)" %in% fitStats$"colnames(stat)")
+      nomResults$numPerm[a]<-nomResults$numPerm[a]+1
+      
+      
+      mergedStat<-join(nomResults[,c("colnames(stat)", "Variant_stat")], fitStats[,c("colnames(stat)", "Variant_stat")], by="colnames(stat)", type="left")
+      
+      #get rows where the permutation coefficent is greater than the nominal coefficent so can increment their counts
+      nomResults$numPermExceed[which(abs(mergedStat[,3]) >= abs(mergedStat[,2]))]<-nomResults$numPermExceed[which(abs(mergedStat[,3]) >= abs(mergedStat[,2]))]+1
+      
+      
+    }
+  }
+  return(nomResults)
+}
+
+fitModels<-function(exprGenos)
+{
+  vars<-colnames(exprGenos)[-c(1:6)]
+  fitsA <- lapply(vars, function(x) {tryCatch(speedglm(substitute(Count~Reads+SEX+POP+i, list(i = as.name(x))), family=poisson(), data = exprGenos),error=function(e) NULL)})
+  return(getFitStats(fitsA))
+}  
