@@ -1,3 +1,4 @@
+
 # example sample data
 Ind <- c("HG00096", "HG00097", "HG00099", "NA20827")
 SEX <- c("male", "female", "female", "male")
