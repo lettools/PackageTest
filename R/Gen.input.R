@@ -77,10 +77,8 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
         cat("Removing leading chr from chromosome names\n")
         ASE$chr <- gsub("chr", "", ASE$chr)
     }
-    print(hap[1:6,1:6])
     colnames(hap) <- rep(Samples$Ind, each = 2)
     rownames(hap) <- LEG$ID
-    print(hap[1:6,1:6])
     
     colnames(LEG)[c(2:4)] <- c("end", "ref", "alt")
     ASE_vars <- merge(ASE, LEG, by = c("end", "ref", "alt"), all.x = FALSE, all.y = FALSE)
@@ -121,7 +119,7 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
     inGenes <- data.frame(ID = merge$names, TSS = merge$TSS, Gene = merge$geneid)
     outsideGenes <- data.frame(ID = snps_without_tss$ID, TSS = snps_without_tss$end, Gene = snps_without_tss$ID)
     inGenes <- inGenes[!duplicated(inGenes), ]
-    outsideGenes <- inGenes[!duplicated(outsideGenes), ]
+    outsideGenes <- outsideGenes[!duplicated(outsideGenes), ]
     annoDF <- rbind.data.frame(inGenes, outsideGenes)
     # This merge takes a while
     cat("Now merging\n")
@@ -144,7 +142,7 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
     
     save(list = ls(all.names = TRUE), file = file.path("PackageTestWork/RDataFiles", output_file), envir = environment())
     cat("Finished\n")
-    dataList <- list(haps = hap, ASE = ASEGenes, leg = LEG, counts = counts)
+    dataList <- list(haps = hap, ASE = ASEGenes, leg = LEG, counts = counts, prefix = output_prefix)
     return(dataList)
 }
 

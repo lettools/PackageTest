@@ -37,8 +37,7 @@
 #'NB: The smallest possible p-value attainable as a result of running permutations is 1/numPerms. Hence, there is no advantage to setting the minimum p-value threshold to below this number.
 
 
-Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd = 10, numPerms = 1e+05, TSSwindow = 5e+05, 
-    pval_threshold = 5e-05) {
+Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd = 10, numPerms = 1e+05, TSSwindow = 5e+05, pval_threshold = 5e-05) {
     # progress_file = paste(c(progress_path, 'progress_', Chromosome, '_task', Task, '.RData'), collapse='')
     
     
@@ -49,8 +48,7 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
         stop("Task or total tasks numbers are misspecified")
     }
     
-    cat(paste(c("Analysing", dim(hetCounts)[1], "out of", dim(inputObj$ASE)[1], "coding heterozygote variants in this task", 
-        "\n"), collapse = " "))
+    
     
     
     # i is the ASE SNP currently on. This changes if a progress file has a different value for it
@@ -58,10 +56,12 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
     
     
     results <- data.frame()
-    
+    task.start.time <- Sys.time()
+    cycle.start.time <- Sys.time()
     
     # This is a checkpoint of results and which current ASE SNP on.
-    progress_file <- paste(c(progress_path, "progress_Chr", Chromosome, "_task", task, ".RData"), collapse = "")
+    progress_file = paste(c("PackageTestWork/ProgressFiles/progress_", inputObj$prefix,"_",task,"_",totalTasks, ".RData"), collapse = "")
+    #progress_file <- paste(c(progress_path, "progress_Chr", Chromosome, "_task", task, ".RData"), collapse = "")
     # Check if the progress_file exists.  If it does, check that it is above a size of zero, or it will produce errors If
     # it doesn't, create it.
     if (file.exists(progress_file)) {
@@ -71,8 +71,7 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
     } else {
         file.create(progress_file)
     }
-    cat(paste(c("At the beginning of this cycle, the results df stored in progress_file now has ", dim(results)[1], " lines.\n"), 
-        collapse = ""))
+    cat(paste(c("At the beginning of this cycle, the results df stored in progress_file now has ", dim(results)[1], " lines.\n"), collapse = ""))
     
     # Start of model loop
     if (dim(hetCounts)[1] > 0) {
@@ -103,8 +102,8 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
             thisVar <- merge(thisVar, inputObj$counts, all.x = FALSE, all.y = FALSE)
             idPairs <- colnames(inputObj$haps)[which(colnames(inputObj$haps) %in% all_0$Ind)]
             # Looking around the TSS window now
-            all <- t(haps[which(rownames(haps) %in% leg$id[which(leg$end > (hetCounts$TSS[i] - TSSwindow) & leg$end < 
-                (hetCounts$TSS[i] + TSSwindow))]), which(colnames(haps) %in% all_0$Ind)])
+            all <- t(inputObj$haps[which(rownames(inputObj$haps) %in% inputObj$leg$id[which(inputObj$leg$end > (hetCounts$TSS[i] - TSSwindow) & inputObj$leg$end < 
+                (hetCounts$TSS[i] + TSSwindow))]), which(colnames(inputObj$haps) %in% all_0$Ind)])
             dim(all)
             # print('printing head of all now')
             genos <- data.frame(Ind = idPairs, all, check.names = FALSE)
@@ -180,14 +179,19 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
 }
 
 getHetCounts <- function(set, setTotal, numInd, inputO) {
-    hetCountsAll <- aggregate(Ind ~ ID + end + TSS + Gene, data = inputO$ASE, FUN = length)
-    hetCountsPass <- hetCountsAll[which(hetCountsAll$Ind >= numInd), ]
-    eachTSS <- unique(hetCountsAll$TSS)
+    #aggregate ignores rows with NAs so use dplyr
+    #hetCountsAll <- aggregate(Ind ~ ID + end + TSS + Gene, data = inputO$ASE, FUN = length)
+    hetCountsAll<-group_by(inputO$ASE, ID, end, TSS, Gene) %>% summarise(count=length(Ind))
+    hetCountsPass <- hetCountsAll[which(hetCountsAll$count >= numInd), ]
+    eachTSS <- unique(hetCountsPass$TSS)
     if (set > length(eachTSS)) {
         stop("Task number is greater than number of distinct TSSs")
     }
     toKeep <- eachTSS[seq(set, length(eachTSS), setTotal)]
-    subHetCounts <- hetCountsAll[which(hetCountsAll$TSS %in% toKeep), ]
+    subHetCounts <- hetCountsPass[which(hetCountsPass$TSS %in% toKeep), ]
+    cat(paste(c("A total of", dim(hetCountsAll)[1], "coding heterozygote variants found", "\n"), collapse = " "))
+    cat(paste(c(dim(hetCountsPass)[1], "coding heterozygote variants found in at least", numInd, "individuals\n"), collapse = " "))
+    cat(paste(c("Analysing", dim(subHetCounts)[1], "coding heterozygote variants in this task", set, "of", setTotal, "\n"), collapse = " "))
     return(subHetCounts)
 }
 
