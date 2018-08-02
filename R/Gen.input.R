@@ -142,7 +142,7 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
     
     save(list = ls(all.names = TRUE), file = file.path("PackageTestWork/RDataFiles", output_file), envir = environment())
     cat("Finished\n")
-    dataList <- list(haps = hap, ASE = ASEGenes, leg = LEG, counts = counts, prefix = output_prefix)
+    dataList <- list(haps = hap, ASE = ASEGenes, leg = LEG, counts = counts, prefix = output_prefix, covar = Samples)
     return(dataList)
 }
 
