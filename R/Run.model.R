@@ -175,7 +175,7 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
         stop("No coding heterozygote variants to analyse in this task\n")
     }
 
-    output_file = paste(c("PackageTestWork/ModelResults/results_", inputObj$prefix,"_",task,"_",totalTasks, ".txt"), collapse = "")
+    output_file = paste(c(inputObj$prefix,"_",task,"_",totalTasks, ".txt"), collapse = "")
 
     write.table(results, output_file, row.names = FALSE, sep = "\t", quote = FALSE)
     inputObj$pvalues<-results
