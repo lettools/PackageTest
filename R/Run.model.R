@@ -60,17 +60,17 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
     cycle.start.time <- Sys.time()
     
     # This is a checkpoint of results and which current ASE SNP on.
-    progress_file = paste(c("PackageTestWork/ProgressFiles/progress_", inputObj$prefix,"_",task,"_",totalTasks, ".RData"), collapse = "")
+#    progress_file = paste(c(inputObj$prefix,"_",task,"_",totalTasks, ".RData"), collapse = "")
     #progress_file <- paste(c(progress_path, "progress_Chr", Chromosome, "_task", task, ".RData"), collapse = "")
     # Check if the progress_file exists.  If it does, check that it is above a size of zero, or it will produce errors If
     # it doesn't, create it.
-    if (file.exists(progress_file)) {
-        if (file.size(progress_file) > 0) {
-            load(file = progress_file)
-        }
-    } else {
-        file.create(progress_file)
-    }
+#    if (file.exists(progress_file)) {
+#        if (file.size(progress_file) > 0) {
+#            load(file = progress_file)
+#        }
+#    } else {
+#        file.create(progress_file)
+#    }
     cat(paste(c("At the beginning of this cycle, the results df stored in progress_file now has ", dim(results)[1], " lines.\n"), collapse = ""))
     
     results <- data.frame()
@@ -93,40 +93,18 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
             
             # need to think about these two lines. Does it mean same variant will be run multiple times?
             thisId <- hetCounts$ID[i]
-            thisASE <- inputObj$ASE[which(inputObj$ASE$ID == thisId), ]
-            all_0 <- cbind(thisASE[, c(colnames(inputObj$covar), "refCount")], 0)
-            all_1 <- cbind(thisASE[, c(colnames(inputObj$covar), "altCount")], 1)
-            colnames(all_0)[c(ncol(all_0)-1,ncol(all_0))] <- c("Count", "All")
-            colnames(all_1)[c(ncol(all_1)-1,ncol(all_1))] <- c("Count", "All")
-            thisVar <- rbind(all_0, all_1)
-            # This shows you the allelic information for the variant you're currently on (i of hetCounts)
-            thisVar <- merge(thisVar, inputObj$counts, all.x = FALSE, all.y = FALSE)
-            idPairs <- colnames(inputObj$haps)[which(colnames(inputObj$haps) %in% all_0$Ind)]
-            # Looking around the TSS window now
-            all <- t(inputObj$haps[which(rownames(inputObj$haps) %in% inputObj$leg$ID[which(inputObj$leg$end > (hetCounts$TSS[i] - TSSwindow) & inputObj$leg$end < 
-                (hetCounts$TSS[i] + TSSwindow))]), which(colnames(inputObj$haps) %in% all_0$Ind)])
-            dim(all)
-            # print('printing head of all now')
-            genos <- data.frame(Ind = idPairs, all, check.names = FALSE)
-            # print('genos below') head(genos)
-            colnames(genos)[which(colnames(genos) == as.character(thisId))] <- "All"
-            #colnames(genos)[1] <- "Ind"
-            # Changed this to implement min-pvalue threshold
-            exprVariants <- data.frame(merge(thisVar, genos, all.x = FALSE, all.y = FALSE))
-            count_1 <- colSums(exprVariants[, 7:dim(exprVariants)[[2]]])
-            count_0 <- dim(exprVariants)[[1]] - count_1
-            exprVar <- exprVariants[, 7:dim(exprVariants)[[2]]][, which(count_0 > 0 & count_1 > 0)]
+            nearbyVar<-inputObj$leg$ID[which(inputObj$leg$end > (hetCounts$TSS[i] - TSSwindow) & inputObj$leg$end < (hetCounts$TSS[i] + TSSwindow))]
+            mergeResults<-mergeExprGenos(thisId, inputObj, nearbyVar)
+            
+            exprVar<-mergeResults$exprVar
             beforenumber_of_nearby_variants <- dim(exprVar)[2]
             if (dim(exprVar)[[1]] < 171) {
-                min_pval <- 1/(factorial(count_0 + count_1)/(factorial(count_0) * factorial(count_1)))
-                passCols <- min_pval[which(min_pval < pval_threshold)]
-                exprVar <- exprVar[, which(colnames(exprVar) %in% names(passCols))]
+                failCols <- mergeResults$min_pval[which(mergeResults$min_pval > pval_threshold)]
+                exprVar <- exprVar[, which(!(colnames(exprVar) %in% names(passCols)))]
             }
-            exprVar <- cbind(exprVariants[, 1:6], exprVar)
-            exprVar <- unique(exprVar[c(1:dim(exprVar)[2])])
             # Changed this to implement min-pvalue threshold
             number_of_nearby_variants <- dim(exprVar)[2]
-            cat(paste(c("This coding variant has", number_of_nearby_variants, "of", beforenumber_of_nearby_variants, "that can theoretically pass the minimum p-value threshold.\n"), 
+            cat(paste(c("This coding variant has", number_of_nearby_variants, "of", beforenumber_of_nearby_variants, "that can theoretically pass the minimum permutation p-value threshold.\n"), 
                 collapse = " "))
             number_individuals <- dim(exprVar)[1]/2
             cat(paste(c("This coding variant is heterozygote at", number_individuals, "individuals.\n"), collapse = " "))
@@ -175,9 +153,9 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
         stop("No coding heterozygote variants to analyse in this task\n")
     }
 
-    output_file = paste(c(inputObj$prefix,"_",task,"_",totalTasks, ".txt"), collapse = "")
+    #output_file = paste(c(inputObj$prefix,"_",task,"_",totalTasks, ".txt"), collapse = "")
 
-    write.table(results, output_file, row.names = FALSE, sep = "\t", quote = FALSE)
+    #write.table(results, output_file, row.names = FALSE, sep = "\t", quote = FALSE)
     inputObj$pvalues<-results
     cat("Task finished\n")
     return(inputObj)
@@ -253,7 +231,7 @@ fitPerms <- function(exprGenos, nomResults, numPerm) {
         vars <- colnames(exprGenos)[-c(1:(length(colnames(inputObj$covar))+3))]
         fitsA <- lapply(vars, function(x) {
           frm<-as.formula(paste(paste("Count ~ Reads", paste(colnames(inputObj$covar)[-1], collapse=" + "), "sample(", sep=" + "), substitute(i, list(i = as.name(x))), ")",sep=""))
-            tryCatch(speedglm(frm, 
+            tryCatch(glm.nb(frm, 
                 family = poisson(), data = exprGenos), error = function(e) NULL)
         })
         fitStats <- getFitStats(fitsA)
@@ -282,7 +260,7 @@ fitModels <- function(exprGenos) {
     vars <- colnames(exprGenos)[-c(1:(length(colnames(inputObj$covar))+3))]
     fitsA <- lapply(vars, function(x) {
      frm<-as.formula(paste(paste("Count ~ Reads", paste(colnames(inputObj$covar)[-1], collapse=" + "), sep=" + "), substitute(i, list(i = as.name(x))),sep=" + "))
-      tryCatch(speedglm(frm, family = poisson(), data = exprGenos), 
+      tryCatch(glm.nb(frm, data = exprGenos), 
                error = function(e) NULL)
     })
     return(getFitStats(fitsA))
