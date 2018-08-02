@@ -174,10 +174,13 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
     } else {
         stop("No coding heterozygote variants to analyse in this task\n")
     }
-    output_file = paste(c("ModelResults/Results_chr", Chromosome, "_task", Task, "_perm.txt"), collapse = "")
+
+    output_file = paste(c("PackageTestWork/ModelResults/results_", inputObj$prefix,"_",task,"_",totalTasks, ".txt"), collapse = "")
+
     write.table(results, output_file, row.names = FALSE, sep = "\t", quote = FALSE)
-    
+    inputObj$pvalues<-results
     cat("Task finished\n")
+    return(inputObj)
     # Script.end.time <- Sys.time() Script.duration <- difftime(Script.end.time, Script.start.time, units='hours')
     # cat(paste(c('Script took ', Script.duration[1], ' minutes\n'), collapse=''))
 }
