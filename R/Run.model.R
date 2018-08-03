@@ -101,7 +101,7 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
             beforenumber_of_nearby_variants <- dim(exprVar)[2]
             if (dim(exprVar)[[1]] < 171) {
                 failCols <- mergeResults$min_pval[which(mergeResults$min_pval > pval_threshold)]
-                exprVar <- exprVar[, which(!(colnames(exprVar) %in% names(passCols)))]
+                exprVar <- exprVar[, which(!(colnames(exprVar) %in% names(failCols)))]
             }
             # Changed this to implement min-pvalue threshold
             number_of_nearby_variants <- dim(exprVar)[2]
