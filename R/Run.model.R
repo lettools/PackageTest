@@ -37,7 +37,7 @@
 #'NB: The smallest possible p-value attainable as a result of running permutations is 1/numPerms. Hence, there is no advantage to setting the minimum p-value threshold to below this number.
 
 
-Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd = 10, numPerms = 1e+05, TSSwindow = 5e+05, pval_threshold = 5e-05) {
+Run.Model <- function(inputObj, output_prefix, task = 1, totalTasks = 1, minInd = 10, numPerms = 1e+05, TSSwindow = 5e+05, pval_threshold = 5e-05) {
     # progress_file = paste(c(progress_path, 'progress_', Chromosome, '_task', Task, '.RData'), collapse='')
     
     
@@ -154,11 +154,14 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
         stop("No coding heterozygote variants to analyse in this task\n")
     }
 
-    #output_file = paste(c(inputObj$prefix,"_",task,"_",totalTasks, ".txt"), collapse = "")
-
-    #write.table(results, output_file, row.names = FALSE, sep = "\t", quote = FALSE)
+    output_file = paste(c(output_prefix,"_",task,"_",totalTasks, ".txt"), collapse = "")
+    write.table(results, output_file, row.names = FALSE, sep = "\t", quote = FALSE)
+    
     inputObj$pvalues<-results
     cat("Task finished\n")
+    output_file = paste(c(output_prefix,"_",task,"_",totalTasks,".RData"), collapse = "")
+    cat(paste(c("Saving ", output_file, "\n"), collapse = ""))
+    save(inputObj, file = output_file)
     return(inputObj)
     # Script.end.time <- Sys.time() Script.duration <- difftime(Script.end.time, Script.start.time, units='hours')
     # cat(paste(c('Script took ', Script.duration[1], ' minutes\n'), collapse=''))
