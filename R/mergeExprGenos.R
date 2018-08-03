@@ -10,12 +10,12 @@ mergeExprGenos <- function(thisId, inputObj, vars) {
   idPairs <- colnames(inputObj$haps)[which(colnames(inputObj$haps) %in% all_0$Ind)]
   
   all <- t(inputObj$haps[which(rownames(inputObj$haps) %in% vars), which(colnames(inputObj$haps) %in% all_0$Ind)])
-  genos <- data.frame(Ind = idPairs, all, check.names = FALSE)
+  #genos <- data.frame(Ind = idPairs, all, check.names = FALSE)
   # print('genos below') head(genos)
-  colnames(genos)[which(colnames(genos) == as.character(thisId))] <- "All"
+  #colnames(genos)[which(colnames(genos) == as.character(thisId))] <- "All"
   #colnames(genos)[1] <- "Ind"
   # Changed this to implement min-pvalue threshold
-  exprVariants <- data.frame(merge(thisVar, genos, all.x = FALSE, all.y = FALSE))
+  exprVariants<-cbind.data.frame(thisVar, all)
   if(dim(exprVariants)[2] > length(colnames(inputObj$covar))+4)
   {
     count_1 <- colSums(exprVariants[, (length(colnames(inputObj$covar))+4):dim(exprVariants)[2]])
