@@ -71,8 +71,8 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
 #    } else {
 #        file.create(progress_file)
 #    }
-    cat(paste(c("At the beginning of this cycle, the results df stored in progress_file now has ", dim(results)[1], " lines.\n"), collapse = ""))
-    
+    #cat(paste(c("At the beginning of this cycle, the results df stored in progress_file now has ", dim(results)[1], " lines.\n"), collapse = ""))
+    covarNames<-colnames(inputObj$covar)
     results <- data.frame()
     # Start of model loop
     if (dim(hetCounts)[1] > 0) {
@@ -109,7 +109,7 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
             number_individuals <- dim(exprVar)[1]/2
             cat(paste(c("This coding variant is heterozygote at", number_individuals, "individuals.\n"), collapse = " "))
             
-            theseResults <- fitModels(exprVar)
+            theseResults <- fitModels(exprVar, covarNames, hetCounts)
             # print('theseResults') print(head(theseResults))
             if (dim(theseResults)[1] > 0) {
                 cat("theseResults df exists.\n")
@@ -132,8 +132,8 @@ Run.Model <- function(inputObj, progress_path, task = 1, totalTasks = 1, minInd 
                     if (numLeft > 0) {
                       # set the variant coeff to numeric as should be no NAs now
                       # toPerm$Variant_coeff<-as.numeric(levels(toPerm$Variant_coeff))[toPerm$Variant_coeff]
-                      exprVar2 <- exprVar[, c(colnames(inputObj$covar), "All", "Count", "Reads", as.character(toPerm[, "colnames(stat)"]))]
-                      permResults <- fitPerms(exprVar2, toPerm, perms)
+                      exprVar2 <- exprVar[, c(covarNames, "All", "Count", "Reads", as.character(toPerm[, "colnames(stat)"]))]
+                      permResults <- fitPerms(exprVar2, toPerm, perms, covarNames, hetCounts)
                       theseResults[rownames(theseResults) %in% rownames(permResults), ]$numPerm <- permResults$numPerm
                       theseResults[rownames(theseResults) %in% rownames(permResults), ]$numPermExceed <- permResults$numPermExceed
                     }
@@ -181,7 +181,7 @@ getHetCounts <- function(set, setTotal, numInd, inputO) {
 }
 
 # Set functions
-getFitStats <- function(fits) {
+getFitStats <- function(fits, hetCounts) {
     coeff_p <- data.frame()
     # remove model fits that failed then check some are left
     fits_NN <- fits[!sapply(fits, is.null)]
@@ -223,18 +223,18 @@ getFitStats <- function(fits) {
     return(coeff_p)
 }
 
-fitPerms <- function(exprGenos, nomResults, numPerm) {
+fitPerms <- function(exprGenos, nomResults, numPerm, covarNames, hetCounts) {
     
     # order nomResults so that can reorder after merge to maintain row positions COMMENTED OUT NEXT LINE
     # nomResults<-nomResults[order(nomResults$'colnames(coeff)'),]
     for (k in 1:numPerm) {
-        vars <- colnames(exprGenos)[-c(1:(length(colnames(inputObj$covar))+3))]
+        vars <- colnames(exprGenos)[-c(1:(length(covarNames)+3))]
         fitsA <- lapply(vars, function(x) {
-          frm<-as.formula(paste(paste("Count ~ Reads", paste(colnames(inputObj$covar)[-1], collapse=" + "), "sample(", sep=" + "), substitute(i, list(i = as.name(x))), ")",sep=""))
+          frm<-as.formula(paste(paste("Count ~ Reads", paste(covarNames[-1], collapse=" + "), "sample(", sep=" + "), substitute(k, list(k = as.name(x))), ")",sep=""))
             tryCatch(glm.nb(frm, 
                 family = poisson(), data = exprGenos), error = function(e) NULL)
         })
-        fitStats <- getFitStats(fitsA)
+        fitStats <- getFitStats(fitsA, hetCounts)
         if (dim(fitStats)[1] > 0) {
             fitStats$"colnames(stat)" <- gsub("sample\\(|\\)", "", fitStats$"colnames(stat)")
             
@@ -256,13 +256,13 @@ fitPerms <- function(exprGenos, nomResults, numPerm) {
     return(nomResults)
 }
 
-fitModels <- function(exprGenos) {
-    vars <- colnames(exprGenos)[-c(1:(length(colnames(inputObj$covar))+3))]
+fitModels <- function(exprGenos, covarNames, hetCounts) {
+    vars <- colnames(exprGenos)[-c(1:(length(covarNames)+3))]
     fitsA <- lapply(vars, function(x) {
-     frm<-as.formula(paste(paste("Count ~ Reads", paste(colnames(inputObj$covar)[-1], collapse=" + "), sep=" + "), substitute(i, list(i = as.name(x))),sep=" + "))
+     frm<-as.formula(paste(paste("Count ~ Reads", paste(covarNames[-1], collapse=" + "), sep=" + "), substitute(j, list(j = as.name(x))),sep=" + "))
       tryCatch(glm.nb(frm, data = exprGenos), 
                error = function(e) NULL)
     })
-    return(getFitStats(fitsA))
+    return(getFitStats(fitsA, hetCounts))
 }
 

@@ -137,13 +137,13 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
     cat("Setting expected proportion of reference reads to", expectedRatio, "in binomial test\n")
     ASEGenes$binomp <- mapply(applyBinom, ASEGenes$refCount, ASEGenes$refCount + ASEGenes$altCount, expectedRatio)
     cat("Merge complete\n")
+    
+    aseDat <- list(haps = hap, ASE = ASEGenes, leg = LEG, counts = counts, prefix = output_prefix, covar = Samples)
     output_file = paste(c(output_prefix, ".RData"), collapse = "")
     cat(paste(c("Saving ", output_file, "\n"), collapse = ""))
-    
-    save(list = ls(all.names = TRUE), file = file.path("PackageTestWork/RDataFiles", output_file), envir = environment())
+    save(aseDat, file = output_file)
     cat("Finished\n")
-    dataList <- list(haps = hap, ASE = ASEGenes, leg = LEG, counts = counts, prefix = output_prefix, covar = Samples)
-    return(dataList)
+    return(aseDat)
 }
 
 
