@@ -59,17 +59,17 @@ Run.Model <- function(inputObj, output_prefix, task = 1, totalTasks = 1, minInd 
     cycle.start.time <- Sys.time()
     
     # This is a checkpoint of results and which current ASE SNP on.
-#    progress_file = paste(c(inputObj$prefix,"_",task,"_",totalTasks, ".RData"), collapse = "")
+    progress_file = paste(c(output_prefix,"_progress_",task,"_",totalTasks, ".RData"), collapse = "")
     #progress_file <- paste(c(progress_path, "progress_Chr", Chromosome, "_task", task, ".RData"), collapse = "")
     # Check if the progress_file exists.  If it does, check that it is above a size of zero, or it will produce errors If
     # it doesn't, create it.
-#    if (file.exists(progress_file)) {
-#        if (file.size(progress_file) > 0) {
-#            load(file = progress_file)
-#        }
-#    } else {
-#        file.create(progress_file)
-#    }
+    if (file.exists(progress_file)) {
+        if (file.size(progress_file) > 0) {
+            load(file = progress_file)
+        }
+    } else {
+        file.create(progress_file)
+    }
     #cat(paste(c("At the beginning of this cycle, the results df stored in progress_file now has ", dim(results)[1], " lines.\n"), collapse = ""))
     # i is the ASE SNP currently on. This changes if a progress file has a different value for it
     i <- 1
