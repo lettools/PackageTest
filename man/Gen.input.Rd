@@ -14,7 +14,7 @@ Gen.input(ASE_file, legend_file, haplotypes_file, samples_file, output_prefix,
 
 \item{haplotypes_file}{Provide haplotypes corresponding to SNPs in legend file, for given individuals found in samples file}
 
-\item{species}{Select same species as cohort. Defaults to "hsapiens"}
+\item{species}{Select same species as cohort. Defaults to 'hsapiens'}
 
 \item{ensembl_version}{Specify version of Ensembl to download from. Defaults to NULL which is the most recent build}
 
@@ -27,21 +27,21 @@ This function prepares the input files for downstream analysis including annotat
 }
 \examples{
 #' #Annotating the input files using the most recent human gene set 
-Gen.input("path_to_ASE_file/ASEfile.txt.gz",
-                    "path_to_legend_file/file.legendfile.gz",
-                   "path_to_haplotypes_file/hapfile.hap.gz",
-                    "path_to_samples_file/samples.txt")
+Gen.input('path_to_ASE_file/ASEfile.txt.gz',
+                    'path_to_legend_file/file.legendfile.gz',
+                   'path_to_haplotypes_file/hapfile.hap.gz',
+                    'path_to_samples_file/samples.txt')
                     
 #Annotating the input files using a previous human gene set
-Gen.input("path_to_ASE_file/ASEfile.txt.gz",
-                    "path_to_legend_file/file.legendfile.gz",
-                   "path_to_haplotypes_file/hapfile.hap.gz",
-                    "path_to_samples_file/samples.txt", ensembl_version=78)
+Gen.input('path_to_ASE_file/ASEfile.txt.gz',
+                    'path_to_legend_file/file.legendfile.gz',
+                   'path_to_haplotypes_file/hapfile.hap.gz',
+                    'path_to_samples_file/samples.txt', ensembl_version=78)
 
 #Annotating the input files using the most recent mouse gene set
-Gen.input("path_to_ASE_file/ASEfile.txt.gz",
-                    "path_to_legend_file/file.legendfile.gz",
-                  "path_to_haplotypes_file/hapfile.hap.gz",
-                    "path_to_samples_file/samples.txt",
-                    "mmusculus")
+Gen.input('path_to_ASE_file/ASEfile.txt.gz',
+                    'path_to_legend_file/file.legendfile.gz',
+                  'path_to_haplotypes_file/hapfile.hap.gz',
+                    'path_to_samples_file/samples.txt',
+                    'mmusculus')
 }

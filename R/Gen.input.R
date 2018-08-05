@@ -83,8 +83,8 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
     colnames(LEG)[c(2:4)] <- c("end", "ref", "alt")
     ASE_vars <- merge(ASE, LEG, by = c("end", "ref", "alt"), all.x = FALSE, all.y = FALSE)
     ASE_vars <- merge(ASE_vars, Samples, by = "Ind", all.x = FALSE, all.y = FALSE)
-    # ASE_vars<-merge(ASE_vars, counts, by.x='Ind', by.y='ID', all.x=FALSE, all.y=FALSE) some SNPs appear twice in ASE
-    # input when overlapping two genes. may want to change this if doing gene level analysis
+    # ASE_vars<-merge(ASE_vars, counts, by.x='Ind', by.y='ID', all.x=FALSE, all.y=FALSE) some SNPs appear twice in ASE input when
+    # overlapping two genes. may want to change this if doing gene level analysis
     ASE_vars <- ASE_vars[!duplicated(ASE_vars[, c("Ind", "ID")]), ]
     
     
@@ -104,15 +104,14 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
     ensemblmerge <- GRanges(seqnames = ensembl$chromosome_name, ranges = IRanges(start = ensembl$exon_chrom_start, end = ensembl$exon_chrom_end, 
         names = ensembl$ensembl_transcript_id), geneid = ensembl$ensembl_gene_id, TSS = ensembl$transcript_start, strand = ensembl$strand)
     
-    ASE_varsmerge <- GRanges(seqnames = Rle(ASE_vars$chr), ranges = IRanges(start = ASE_vars$end, end = ASE_vars$end), 
-        names = ASE_vars$ID)
+    ASE_varsmerge <- GRanges(seqnames = Rle(ASE_vars$chr), ranges = IRanges(start = ASE_vars$end, end = ASE_vars$end), names = ASE_vars$ID)
     
     merge <- mergeByOverlaps(ASE_varsmerge, ensemblmerge)
     # MAY NEED TO CHANGE COLUMN NAMES. COULD JUST DO NUMBERS AND SAY WHAT EACH NUMBER CORRESPONDS TO IN A HELP FILE
     
     
-    # find out which snps are not found in my merge and so are without a known tss Pull them out of the metric file which
-    # also has their positions
+    # find out which snps are not found in my merge and so are without a known tss Pull them out of the metric file which also has their
+    # positions
     snps_without_tss <- ASE_vars[which(!(ASE_vars$ID %in% merge$names)), ]
     
     # Add the TSS and geneid information to the ASE_vars df
@@ -160,8 +159,8 @@ readInputs <- function(thisFile, type) {
             thisData <- read.table(thisFile, stringsAsFactors = F, header = T)
         }
         cols <- colnames(thisData)
-        # lets change samples file so can take any number of different covariates do we need the ref and alt alleles in ASE
-        # file? Best to keep required columns to a minimum also lets call allele counts rather than ASE
+        # lets change samples file so can take any number of different covariates do we need the ref and alt alleles in ASE file? Best to keep
+        # required columns to a minimum also lets call allele counts rather than ASE
         if ((type == "samples") & (cols[1] != "Ind")) {
             print(sample_example)
             stop("First line of samples file does not start with ID. Make sure a header line is specified as above")

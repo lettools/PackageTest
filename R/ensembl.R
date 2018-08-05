@@ -24,8 +24,8 @@ ensemblAttributes <- function(spec = "hsapiens", vers = NULL) {
             if (!is.null(ens)) {
                 cat("Connection successful. Getting gene info from Ensembl.\n")
                 cat("This can take a few minutes.\n")
-                ensAttr <- getBM(attributes = c("chromosome_name", "ensembl_transcript_id", "ensembl_gene_id", "start_position", 
-                  "exon_chrom_start", "exon_chrom_end", "transcript_start", "transcript_end", "strand"), mart = ens)
+                ensAttr <- getBM(attributes = c("chromosome_name", "ensembl_transcript_id", "ensembl_gene_id", "start_position", "exon_chrom_start", 
+                  "exon_chrom_end", "transcript_start", "transcript_end", "strand"), mart = ens)
                 cat("Completed retrieving gene info.\n")
             } else if (attempt == maxAttempts) {
                 stop("Connection unsuccessful. Giving up. Did you specify a valid species name? Options include hsapiens, mmusculus and others.\n")

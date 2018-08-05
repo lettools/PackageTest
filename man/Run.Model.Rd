@@ -4,10 +4,20 @@
 \alias{Run.Model}
 \title{Run Model}
 \usage{
-Run.Model(input_file, Task, progress_path, numTasks = 100, Chromosome,
+Run.Model(inputObj, output_prefix, task = 1, totalTasks = 1, minInd = 10,
   numPerms = 1e+05, TSSwindow = 5e+05, pval_threshold = 5e-05)
 }
 \arguments{
+\item{numPerms}{Select how many permutations to run. Along with splitting the process up into simultaneous tasks, this is the biggest factor in determining how long the analysis will take. However, the 
+more permutations, in general and up until a point, the more precise and accurate the results may be; for example, if set to 100, the minimum p-value that can possibly be reached as a result of 
+permutations, is 0.01. Defaults to 100,000.}
+
+\item{TSSwindow}{This represents the distance over which nearby variants will be selected,  either side of the transcript start site. Defaults to 500kb}
+
+\item{pval_threshold}{There is a theoretical minimum p-value for each particular combination of reference and alternative alleles for a given set of individuals for a given nearby variant of an ASE site
+. 
+\t\t\t This parameter sets the upper limit. Default is 0.00005. In this example the model will not be run if it is not possible to reach a p-value as low as 0.00005, even theoretically.}
+
 \item{input_file}{This is the RData file outputted from the first function, gen.input}
 
 \item{Task}{This analysis is very computationally burdensome. To speed up the process it is an advantage to split it up into tasks that may be run on multiple nodes, concurrently.}
@@ -17,16 +27,6 @@ Run.Model(input_file, Task, progress_path, numTasks = 100, Chromosome,
 \item{numTasks}{Select how many jobs/tasks to split the process up into. Defaults to 100}
 
 \item{Chromosome}{Specify chromosome used in input file}
-
-\item{numPerms}{Select how many permutations to run. Along with splitting the process up into simultaneous tasks, this is the biggest factor in determining how long the analysis will take. However, the 
-more permutations, in general and up until a point, the more precise and accurate the results may be; for example, if set to 100, the minimum p-value that can possibly be reached as a result of 
-permutations, is 0.01. Defaults to 100,000.}
-
-\item{TSSwindow}{This represents the distance over which nearby variants will be selected,  either side of the transcript start site. Defaults to 500kb}
-
-\item{pval_threshold}{There is a theoretical minimum p-value for each particular combination of reference and alternative alleles for a given set of individuals for a given nearby variant of an ASE site
-. 
-             This parameter sets the upper limit. Default is 0.00005. In this example the model will not be run if it is not possible to reach a p-value as low as 0.00005, even theoretically.}
 }
 \description{
 Allows you to measure statistical association between nearby regulatory variants and the level of expression at a heterozygous coding polymorphism, controlling for factors such as sex and population,
@@ -34,21 +34,21 @@ by utilising a generalized linear model and applying permutations to the data in
 }
 \examples{
 #Run model with task set to 10, chromosome to 22, for 100,000 permutations, a transcript start site window of 500kb and a theoretical p-value threshold of 0.00005
-Run.Model("input_file.RData", 10, 
-        "path_to_progress_file",
-        "output_path",
+Run.Model('input_file.RData', 10, 
+        'path_to_progress_file',
+        'output_path',
         Chromosome=22)
 
-#Run model with task	set to 10, chromosome to 22, for 10,000 permutations, a transcript start site window of 500kb and a theoretical p-value of 0.0005
-Run.Model("input_file.RData", 10,
-        "path_to_progress_file",
-        "output_path",
+#Run model with task\\tset to 10, chromosome to 22, for 10,000 permutations, a transcript start site window of 500kb and a theoretical p-value of 0.0005
+Run.Model('input_file.RData', 10,
+        'path_to_progress_file',
+        'output_path',
         Chromosome=22, numPerms=10000, pval_threshold=10000)
 
-#Run model with task	set to 2, chromosome to 12, for 10,000 permutations, a transcript start site window of 1Mb and a theoretical p-value of 0.0005
-Run.Model("input_file.RData", 2,
-        "path_to_progress_file",
-        "output_path",
+#Run model with task\\tset to 2, chromosome to 12, for 10,000 permutations, a transcript start site window of 1Mb and a theoretical p-value of 0.0005
+Run.Model('input_file.RData', 2,
+        'path_to_progress_file',
+        'output_path',
         Chromosome=22, numPerms=10000,TSSwindow=100000, pval_threshold=10000)
 
 NB: The smallest possible p-value attainable as a result of running permutations is 1/numPerms. Hence, there is no advantage to setting the minimum p-value threshold to below this number.
