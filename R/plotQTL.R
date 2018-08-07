@@ -13,6 +13,7 @@
 plotQTL <- function(modelOut, aseVar, qtlVar) {
     qtlData <- mergeExprGenos(aseVar, modelOut, qtlVar)
     exprData <- qtlData$exprVar
+    exprData<-exprData[with(exprData, order(Ind, All)),]
     exprData$RPM <- exprData$Count/(exprData$Reads/1e+06)
     
     dodge <- position_dodge(width = 0.7)
@@ -22,4 +23,17 @@ plotQTL <- function(modelOut, aseVar, qtlVar) {
         theme(legend.position = "none")
     
     p1
+    
+    #scatDat<-spread(exprData[,c("Ind","All", "RPM")], key=All, value=RPM)
+    #colnames(scatDat)<-c("Ind", "Allele0", "Allele1")
+    #qtlGenos<-aggregate(rs140347 ~ Ind, data = exprData, paste, collapse = ",")
+    #scatDat<-merge(scatDat, qtlGenos)
+    #ggplot(scatDat, aes(x=Allele0, y=Allele1, colour=rs140347)) + geom_point()+ theme_pubr()+ 
+    #  geom_smooth(method=lm, se=FALSE, fullrange=FALSE) +
+    #  stat_ellipse(type = "norm")
+    
+    #ggscatter(scatDat, x = "Allele0", y = "Allele1",
+    #          color = "rs175183", shape = "rs175183",
+    #          ellipse = TRUE, mean.point = TRUE,
+    #          star.plot = TRUE)
 }
