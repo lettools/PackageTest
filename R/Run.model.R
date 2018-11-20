@@ -224,8 +224,8 @@ getFitStats <- function(fits, theseHetCounts) {
         rownames(pvals) <- gsub("sample\\(|\\)", "", row.names(pvals))
         rownames(stat) <- gsub(testedVar, "Variant", row.names(stat))
         rownames(pvals) <- gsub(testedVar, "Variant", row.names(pvals))
-        rownames(stat) <- gsub("\\[seq_len\\(length\\(Variant\\)\\) \\+ c\\(1, -1\\)\\]", "_alt_all", row.names(stat))
-        rownames(pvals) <- gsub("\\[seq_len\\(length\\(Variant\\)\\) \\+ c\\(1, -1\\)\\]", "_alt_all", row.names(pvals))
+        rownames(stat) <- gsub("\\[seq_len\\(length\\(Variant \\+ c\\(1, -1\\]", "_alt_all", row.names(stat))
+        rownames(pvals) <- gsub("\\[seq_len\\(length\\(Variant \\+ c\\(1, -1\\]", "_alt_all", row.names(pvals))
         
         #grepping for seq_len may cause problems in the admittedly rare occurrence of a user having a covariate with this in
         #so should look at updating this.

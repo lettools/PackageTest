@@ -128,6 +128,8 @@ Gen.input <- function(ASE_file, legend_file, haplotypes_file, samples_file, outp
     ASEGenes$propRef <- ASEGenes$refCount/(ASEGenes$refCount + ASEGenes$altCount)
     ASEGenes$totalReads <- rowSums(ASEGenes[, c("refCount", "altCount")])
     ASEGenes$logRatio <- log2((ASEGenes$refCount + 1)/(ASEGenes$altCount + 1))
+    #in theory user can input site with no reads so remove these
+    ASEGenes<-ASEGenes[which(!is.na(ASEGenes$propRef)),]
     
     expectedRatio <- 0.5
     if (length(ASEGenes$propRef > 1000)) {
