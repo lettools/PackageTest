@@ -247,7 +247,7 @@ fitPerms <- function(exprGenos, nomResults, numPerm, covarNames, theseHetCounts,
     for (k in 1:numPerm) {
         vars <- colnames(exprGenos)[-c(1:(length(covarNames) + 3))]
         
-        if(isTRUE(altAll) {
+        if(isTRUE(altAll)) {
           fitsA <- lapply(vars, function(x) {
             frm <- as.formula(paste(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "),paste(substitute(j, list(j = as.name(x))),"[seq_len(length(",substitute(j, list(j = as.name(x))),")) + c(1,-1)] * ", sep=""), " sample(", sep = " + "), substitute(k, list(k = as.name(x))), ")", sep = ""))
             tryCatch(glm.nb(frm, data = exprGenos), error = function(e) NULL)
