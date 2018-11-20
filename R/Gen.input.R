@@ -163,7 +163,7 @@ readInputs <- function(thisFile, type) {
         # required columns to a minimum also lets call allele counts rather than ASE
         if ((type == "samples") & (cols[1] != "Ind")) {
             print(sample_example)
-            stop("First line of samples file does not start with ID. Make sure a header line is specified as above")
+            stop("First line of samples file does not start with Ind. Make sure a header line is specified as above")
             
         } else if ((type == "allele counts") & !all(colnames(ASE_example) %in% cols)) {
             print(ASE_example)

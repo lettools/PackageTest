@@ -37,7 +37,7 @@
 #'NB: The smallest possible p-value attainable as a result of running permutations is 1/numPerms. Hence, there is no advantage to setting the minimum p-value threshold to below this number.
 
 
-Run.Model <- function(inputObj, output_prefix, task = 1, totalTasks = 1, minInd = 10, numPerms = 1e+05, TSSwindow = 5e+05, pval_threshold = 5e-05) {
+Run.Model <- function(inputObj, output_prefix, task = 1, totalTasks = 1, minInd = 10, numPerms = 1e+05, TSSwindow = 5e+05, pval_threshold = 5e-05, other_all = FALSE) {
     # progress_file = paste(c(progress_path, 'progress_', Chromosome, '_task', Task, '.RData'), collapse='')
     
     
@@ -110,7 +110,7 @@ Run.Model <- function(inputObj, output_prefix, task = 1, totalTasks = 1, minInd 
             number_individuals <- dim(exprVar)[1]/2
             cat(paste(c("This coding variant is heterozygote at", number_individuals, "individuals.\n"), collapse = " "))
             
-            theseResults <- fitModels(exprVar, covarNames, hetCounts[i, ])
+            theseResults <- fitModels(exprVar, covarNames, hetCounts[i, ],other_all)
             # print('theseResults') print(head(theseResults))
             if (dim(theseResults)[1] > 0) {
                 cat("theseResults df exists.\n")
@@ -133,7 +133,7 @@ Run.Model <- function(inputObj, output_prefix, task = 1, totalTasks = 1, minInd 
                       # set the variant coeff to numeric as should be no NAs now
                       # toPerm$Variant_coeff<-as.numeric(levels(toPerm$Variant_coeff))[toPerm$Variant_coeff]
                       exprVar2 <- exprVar[, c(covarNames, "All", "Count", "Reads", as.character(toPerm[, "colnames(stat)"]))]
-                      permResults <- fitPerms(exprVar2, toPerm, perms, covarNames, hetCounts[i, ])
+                      permResults <- fitPerms(exprVar2, toPerm, perms, covarNames, hetCounts[i, ],other_all)
                       theseResults[rownames(theseResults) %in% rownames(permResults), ]$numPerm <- permResults$numPerm
                       theseResults[rownames(theseResults) %in% rownames(permResults), ]$numPermExceed <- permResults$numPermExceed
                     }
@@ -214,12 +214,25 @@ getFitStats <- function(fits, theseHetCounts) {
         testedVar <- sapply(fits_NN, function(f) {
             attributes(summary(f)$terms)$variables[[length(attributes(summary(f)$terms)$variables)]]
         })
+        testedVar<-gsub("^sample\\(|\\)$", "", testedVar)
         colnames(stat) <- testedVar
         colnames(pvals) <- testedVar
+        #tidy up the row names
         rownames(stat) <- paste(names(coef(fits_NN[[1]])), "_stat", sep = "")
         rownames(pvals) <- paste(names(coef(fits_NN[[1]])), "_p", sep = "")
-        rownames(stat)[length(rownames(stat))] <- "Variant_stat"
-        rownames(pvals)[length(rownames(pvals))] <- "Variant_p"
+        rownames(stat) <- gsub("sample\\(|\\)", "", row.names(stat))
+        rownames(pvals) <- gsub("sample\\(|\\)", "", row.names(pvals))
+        rownames(stat) <- gsub(testedVar, "Variant", row.names(stat))
+        rownames(pvals) <- gsub(testedVar, "Variant", row.names(pvals))
+        rownames(stat) <- gsub("\\[seq_len\\(length\\(Variant\\)\\) \\+ c\\(1, -1\\)\\]", "_alt_all", row.names(stat))
+        rownames(pvals) <- gsub("\\[seq_len\\(length\\(Variant\\)\\) \\+ c\\(1, -1\\)\\]", "_alt_all", row.names(pvals))
+        
+        #grepping for seq_len may cause problems in the admittedly rare occurrence of a user having a covariate with this in
+        #so should look at updating this.
+        #rownames(stat)[grepl( "seq_len" , rownames( stat ) )]<-"Other_allele_stat"
+        #rownames(pvals)[grepl( "seq_len" , rownames( pvals ) )]<-"Other_allele_p"
+        #rownames(stat)[length(rownames(stat))] <- "Variant_stat"
+        #rownames(pvals)[length(rownames(pvals))] <- "Variant_p"
         coeff_p <- cbind.data.frame(theseHetCounts, cbind.data.frame(colnames(stat), cbind.data.frame(t(stat), t(pvals))))
         # add NAs for any missing columns NEED TO FIX WHAT HAPPENS IF COLUMNS MISSING missingCols <- colHead[which(!(colHead %in%
         # colnames(coeff_p)))] coeff_p[, missingCols] <- 'NA' order columns coeff_p <- coeff_p[, colHead]
@@ -227,17 +240,26 @@ getFitStats <- function(fits, theseHetCounts) {
     return(coeff_p)
 }
 
-fitPerms <- function(exprGenos, nomResults, numPerm, covarNames, theseHetCounts) {
+fitPerms <- function(exprGenos, nomResults, numPerm, covarNames, theseHetCounts, altAll) {
     
     # order nomResults so that can reorder after merge to maintain row positions COMMENTED OUT NEXT LINE
     # nomResults<-nomResults[order(nomResults$'colnames(coeff)'),]
     for (k in 1:numPerm) {
         vars <- colnames(exprGenos)[-c(1:(length(covarNames) + 3))]
-        fitsA <- lapply(vars, function(x) {
-            frm <- as.formula(paste(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), "sample(", sep = " + "), substitute(k, 
-                list(k = as.name(x))), ")", sep = ""))
-            tryCatch(glm.nb(frm, family = poisson(), data = exprGenos), error = function(e) NULL)
-        })
+        
+        if(isTRUE(altAll) {
+          fitsA <- lapply(vars, function(x) {
+            frm <- as.formula(paste(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "),paste(substitute(j, list(j = as.name(x))),"[seq_len(length(",substitute(j, list(j = as.name(x))),")) + c(1,-1)] * ", sep=""), " sample(", sep = " + "), substitute(k, list(k = as.name(x))), ")", sep = ""))
+            tryCatch(glm.nb(frm, data = exprGenos), error = function(e) NULL)
+          })
+        } else {
+        
+          fitsA <- lapply(vars, function(x) {
+              frm <- as.formula(paste(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), "sample(", sep = " + "), substitute(k, 
+                  list(k = as.name(x))), ")", sep = ""))
+              tryCatch(glm.nb(frm, data = exprGenos), error = function(e) NULL)
+          })
+        }
         fitStats <- getFitStats(fitsA, theseHetCounts)
         if (dim(fitStats)[1] > 0) {
             fitStats$"colnames(stat)" <- gsub("sample\\(|\\)", "", fitStats$"colnames(stat)")
@@ -260,13 +282,29 @@ fitPerms <- function(exprGenos, nomResults, numPerm, covarNames, theseHetCounts)
     return(nomResults)
 }
 
-fitModels <- function(exprGenos, covarNames, theseHetCounts) {
+fitModels <- function(exprGenos, covarNames, theseHetCounts, altAll) {
     vars <- colnames(exprGenos)[-c(1:(length(covarNames) + 3))]
-    fitsA <- lapply(vars, function(x) {
-        frm <- as.formula(paste(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), sep = " + "), substitute(j, list(j = as.name(x))), 
-            sep = " + "))
+    
+    #frm <- as.formula(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), sep=" + "))
+    #residFit<-glm.nb(frm, data=exprGenos)
+    #exprGenos$residuals<-exprGenos$Count - predict(residFit)
+    
+    #if should fit allele on other chromosome as well
+    if(isTRUE(altAll)) {
+      fitsA <- lapply(vars, function(x) {
+        frm <- as.formula(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), paste(substitute(j, list(j = as.name(x))),"[seq_len(length(",substitute(j, list(j = as.name(x))),")) + c(1,-1)] * ", substitute(j, list(j = as.name(x))), sep=""), sep = " + "))
         tryCatch(glm.nb(frm, data = exprGenos), error = function(e) NULL)
-    })
+      })
+    } else {
+      fitsA <- lapply(vars, function(x) {
+          frm <- as.formula(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), substitute(j, list(j = as.name(x))), sep = " + "))
+          tryCatch(glm.nb(frm, data = exprGenos), error = function(e) NULL)
+      })
+    }
     return(getFitStats(fitsA, theseHetCounts))
 }
 
+#test<-exprGenos %>% group_by(.dots=c("Ind", "POP", "SEX")) %>% summarise_all(funs(sum))
+#fitsA[[1]]<-glm.nb(Count ~ Reads + POP + SEX + rs2017689, exprGenos)
+#getFitStats(fitsA, theseHetCounts) 
+  
