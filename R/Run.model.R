@@ -293,28 +293,12 @@ fitModels <- function(exprGenos, covarNames, theseHetCounts, altAll) {
     if(isTRUE(altAll)) {
       fitsA <- lapply(vars, function(x) {
         frm <- as.formula(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), paste(substitute(j, list(j = as.name(x))),"[seq_len(length(",substitute(j, list(j = as.name(x))),")) + c(1,-1)] * ", substitute(j, list(j = as.name(x))), sep=""), sep = " + "))
-        thisFit<-tryCatch(glm(frm, data = exprGenos, family=poisson()), error = function(e) NULL)
-        if(!is.null(thisFit))
-        {
-          if(dispersiontest(thisFit)$p < 0.05)
-          {
-            thisFit<-tryCatch(glm(frm, data = exprGenos, family=quasipoisson()), error = function(e) NULL)
-          }
-        }
-        thisFit
+        thisFit<-tryCatch(glm(frm, data = exprGenos, family=quasipoisson()), error = function(e) NULL)
       })
     } else {
       fitsA <- lapply(vars, function(x) {
-        frm <- as.formula(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), substitute(j, list(j = as.name(x))), sep = " + "))
-        thisFit<-tryCatch(glm.nb(frm, data = exprGenos), error = function(e) NULL)
-        if(!is.null(thisFit))
-        {
-          if(dispersiontest(thisFit)$p < 0.05)
-          {
-            thisFit<-tryCatch(glm(frm, data = exprGenos, family=quasipoisson()), error = function(e) NULL)
-          }
-        }
-        thisFit
+          frm <- as.formula(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), substitute(j, list(j = as.name(x))), sep = " + "))
+          tryCatch(glm.nb(frm, data = exprGenos, family=quasipoisson()), error = function(e) NULL)
       })
     }
     return(getFitStats(fitsA, theseHetCounts))
