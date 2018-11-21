@@ -9,6 +9,7 @@ RoxygenNote: 6.0.1
 biocViews:
 Depends:
   R (>= 3.2.2),
+  AER,
   biomaRt,
   GenomicRanges,
   ggplot2,
