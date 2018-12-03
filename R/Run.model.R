@@ -306,7 +306,7 @@ fitModels <- function(exprGenos, covarNames, theseHetCounts, altAll) {
     } else {
       fitsA <- lapply(vars, function(x) {
         frm <- as.formula(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), substitute(j, list(j = as.name(x))), sep = " + "))
-        thisFit<-tryCatch(glm.nb(frm, data = exprGenos), error = function(e) NULL)
+        thisFit<-tryCatch(glm(frm, data = exprGenos, family=poisson()), error = function(e) NULL)
         if(!is.null(thisFit))
         {
           if(dispersiontest(thisFit)$p < 0.05)
