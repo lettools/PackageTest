@@ -34,7 +34,12 @@ mergeExprGenos <- function(thisId, inputObj, vars) {
     if (dim(exprVar)[2] < (length(colnames(inputObj$covar)) + 4)) {
         stop("Variant not found or is fixed in individuals")
     }
-    min_pval <- 1/(factorial(count_0 + count_1)/(factorial(count_0) * factorial(count_1)))
+    if((count_0 + count_1) < 171)
+    {
+      min_pval <- 1/(factorial(count_0 + count_1)/(factorial(count_0) * factorial(count_1)))
+    } else {
+      min_pval <- 0
+    }
     exprVar <- unique(exprVar)
     return(list(exprVar = exprVar, min_pval = min_pval))
 }

@@ -10,11 +10,12 @@
 #' plotQTL(aseDat,'rs116197803', 'rs175183')
 
 
-plotQTL <- function(modelOut, aseVar, qtlVar) {
+plotQTL <- function(modelOut, aseVar, qtlVar, otherAll = FALSE) {
     qtlData <- mergeExprGenos(aseVar, modelOut, qtlVar)
     exprData <- qtlData$exprVar
     exprData<-exprData[with(exprData, order(Ind, All)),]
     exprData$RPM <- exprData$Count/(exprData$Reads/1e+06)
+    exprData$alt_all<-exprData[,qtlVar][seq_len(length(exprData[,qtlVar])) + c(1,-1)]
     
     dodge <- position_dodge(width = 0.7)
     p1 <- ggplot(exprData, aes(x = as.factor(get(qtlVar)), y = RPM)) + geom_violin(trim = FALSE, position = dodge, aes(fill = as.factor(get(qtlVar)))) + 
@@ -22,6 +23,10 @@ plotQTL <- function(modelOut, aseVar, qtlVar) {
         ylab(paste("RPM at ", aseVar, sep = "")) + xlab(paste("Allele at ", qtlVar, sep = "")) + theme_pubr() + stat_compare_means(label.x = 1.3) + 
         theme(legend.position = "none")
     
+    if(isTRUE(otherAll))
+    {
+      p1<-p1 + facet_grid(. ~ alt_all)
+    }
     p1
     
     #scatDat<-spread(exprData[,c("Ind","All", "RPM")], key=All, value=RPM)
