@@ -115,7 +115,11 @@ Run.Model <- function(inputObj, output_prefix, task = 1, totalTasks = 1, minInd 
             if (dim(theseResults)[1] > 0) {
                 cat("theseResults df exists.\n")
                 theseResults$numPerm <- 0
-                theseResults$numPermExceed <- 0
+                theseResults$numPermExceed.Variant <- 0
+                if(isTRUE(other_all))
+                {
+                  theseResults$numPermExceed.Interaction <- 0
+                }
                 
                 if (numPerms > 0) {
                   # do the permutations
@@ -125,14 +129,14 @@ Run.Model <- function(inputObj, output_prefix, task = 1, totalTasks = 1, minInd 
                   # print(Sys.time())
                   while (totalPerms <= numPerms) {
                     # get just nominal signif
-                    toPerm <- theseResults[which(theseResults$Variant_p < 5e-06 & theseResults$numPermExceed < 5), ]
+                    toPerm <- theseResults[which(theseResults$Variant.p.value < pval_threshold & theseResults$numPermExceed < 5), ]
                     numLeft <- dim(toPerm)[1]
                     # cat(paste(c(totalPerms, '\n'), collapse=' '))
                     
                     if (numLeft > 0) {
                       # set the variant coeff to numeric as should be no NAs now
                       # toPerm$Variant_coeff<-as.numeric(levels(toPerm$Variant_coeff))[toPerm$Variant_coeff]
-                      exprVar2 <- exprVar[, c(covarNames, "All", "Count", "Reads", as.character(toPerm[, "colnames(stat)"]))]
+                      exprVar2 <- exprVar[, c(covarNames, "All", "Count", "Reads", as.character(toPerm[, "id"]))]
                       permResults <- fitPerms(exprVar2, toPerm, perms, covarNames, hetCounts[i, ],other_all)
                       theseResults[rownames(theseResults) %in% rownames(permResults), ]$numPerm <- permResults$numPerm
                       theseResults[rownames(theseResults) %in% rownames(permResults), ]$numPermExceed <- permResults$numPermExceed
@@ -194,48 +198,25 @@ getFitStats <- function(fits, theseHetCounts) {
     })]
     
     if (length(fits_NN) > 0) {
-        stat <- sapply(fits_NN, function(f) {
-            c <- summary(f)$coefficients[, 3]
-            if (is.factor(c)) {
-                as.numeric(levels(c))[c]
-            } else {
-                c
-            }
-        })
-        pvals <- sapply(fits_NN, function(f) {
-            p <- summary(f)$coefficients[, 4]
-            if (is.factor(p)) {
-                as.numeric(levels(p))[p]
-            } else {
-                p
-            }
-        })
-        # get names of variants that didnt return null
-        testedVar <- sapply(fits_NN, function(f) {
-            attributes(summary(f)$terms)$variables[[length(attributes(summary(f)$terms)$variables)]]
-        })
-        testedVar<-gsub("^sample\\(|\\)$", "", testedVar)
-        colnames(stat) <- testedVar
-        colnames(pvals) <- testedVar
-        #tidy up the row names
-        rownames(stat) <- paste(names(coef(fits_NN[[1]])), "_stat", sep = "")
-        rownames(pvals) <- paste(names(coef(fits_NN[[1]])), "_p", sep = "")
-        rownames(stat) <- gsub("sample\\(|\\)", "", row.names(stat))
-        rownames(pvals) <- gsub("sample\\(|\\)", "", row.names(pvals))
-        rownames(stat) <- gsub(testedVar, "Variant", row.names(stat))
-        rownames(pvals) <- gsub(testedVar, "Variant", row.names(pvals))
-        rownames(stat) <- gsub("\\[seq_len\\(length\\(Variant \\+ c\\(1, -1\\]", "_alt_all", row.names(stat))
-        rownames(pvals) <- gsub("\\[seq_len\\(length\\(Variant \\+ c\\(1, -1\\]", "_alt_all", row.names(pvals))
-        
-        #grepping for seq_len may cause problems in the admittedly rare occurrence of a user having a covariate with this in
-        #so should look at updating this.
-        #rownames(stat)[grepl( "seq_len" , rownames( stat ) )]<-"Other_allele_stat"
-        #rownames(pvals)[grepl( "seq_len" , rownames( pvals ) )]<-"Other_allele_p"
-        #rownames(stat)[length(rownames(stat))] <- "Variant_stat"
-        #rownames(pvals)[length(rownames(pvals))] <- "Variant_p"
-        coeff_p <- cbind.data.frame(theseHetCounts, cbind.data.frame(colnames(stat), cbind.data.frame(t(stat), t(pvals))))
-        # add NAs for any missing columns NEED TO FIX WHAT HAPPENS IF COLUMNS MISSING missingCols <- colHead[which(!(colHead %in%
-        # colnames(coeff_p)))] coeff_p[, missingCols] <- 'NA' order columns coeff_p <- coeff_p[, colHead]
+      modelStats<-purrr::map_df(fits_NN, broom::tidy, .id = "variant")
+      modelStats$variant<-as.numeric(modelStats$variant)
+      # get names of variants that didnt return null
+      testedVar <- sapply(fits_NN, function(f) {
+        attributes(summary(f)$terms)$variables[[length(attributes(summary(f)$terms)$variables)]]
+      })
+      testedVar<-gsub("^sample\\(|\\)$", "", testedVar)
+      ids<-cbind.data.frame(variant=1:length(testedVar),id=as.character(testedVar))
+      modelStats<-left_join(modelStats, ids, by="variant")
+      modelStats$term[grep("]:", modelStats$term)]<-"Interaction"
+      modelStats$term[grep("seq_len", modelStats$term)]<-"Other_allele"
+      modelStats$term[which(modelStats$term == modelStats$id)]<-"Variant"
+      modelStats$term[grep("sample\\(", modelStats$term)]<-"Variant"
+      #modelStats[1:15,]
+      gath<-modelStats %>% gather("metric", "value", 3:6) %>%
+        unite("term.metric", term, metric, sep = ".") %>%
+        spread(term.metric, value)
+      coeff_p<-cbind.data.frame(theseHetCounts, gath)
+      row.names(coeff_p)<-coeff_p$id
     }
     return(coeff_p)
 }
@@ -250,31 +231,57 @@ fitPerms <- function(exprGenos, nomResults, numPerm, covarNames, theseHetCounts,
         if(isTRUE(altAll)) {
           fitsA <- lapply(vars, function(x) {
             frm <- as.formula(paste(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "),paste(substitute(j, list(j = as.name(x))),"[seq_len(length(",substitute(j, list(j = as.name(x))),")) + c(1,-1)] * ", sep=""), " sample(", sep = " + "), substitute(k, list(k = as.name(x))), ")", sep = ""))
-            tryCatch(glm.nb(frm, data = exprGenos), error = function(e) NULL)
+            thisFit<-tryCatch(glm(frm, data = exprGenos, family=poisson()), error = function(e) NULL)
+            if(!is.null(thisFit))
+            {
+              if(dispersiontest(thisFit)$p < 0.05)
+              {
+                thisFit<-tryCatch(glm(frm, data = exprGenos, family=quasipoisson()), error = function(e) NULL)
+              }
+            }
+            thisFit
+            
           })
         } else {
         
           fitsA <- lapply(vars, function(x) {
               frm <- as.formula(paste(paste("Count ~ Reads", paste(covarNames[-1], collapse = " + "), "sample(", sep = " + "), substitute(k, 
                   list(k = as.name(x))), ")", sep = ""))
-              tryCatch(glm.nb(frm, data = exprGenos), error = function(e) NULL)
+              thisFit<-tryCatch(glm(frm, data = exprGenos, family=poisson()), error = function(e) NULL)
+              if(!is.null(thisFit))
+              {
+                if(dispersiontest(thisFit)$p < 0.05)
+                {
+                  thisFit<-tryCatch(glm(frm, data = exprGenos, family=quasipoisson()), error = function(e) NULL)
+                }
+              }
+              thisFit
           })
         }
         fitStats <- getFitStats(fitsA, theseHetCounts)
         if (dim(fitStats)[1] > 0) {
-            fitStats$"colnames(stat)" <- gsub("sample\\(|\\)", "", fitStats$"colnames(stat)")
+            #fitStats$"colnames(stat)" <- gsub("sample\\(|\\)", "", fitStats$"colnames(stat)")
             
             # get rows where have a valid permutation count so can increment just their counts
-            a <- which(nomResults$"colnames(stat)" %in% fitStats$"colnames(stat)")
+            a <- which(nomResults$"id" %in% fitStats$"id")
             nomResults$numPerm[a] <- nomResults$numPerm[a] + 1
             
             
-            mergedStat <- join(nomResults[, c("colnames(stat)", "Variant_stat")], fitStats[, c("colnames(stat)", "Variant_stat")], by = "colnames(stat)", 
+            mergedStat <- join(nomResults[, c("id", "Variant.statistic")], fitStats[, c("id", "Variant.statistic")], by = "id", 
                 type = "left")
             
             # get rows where the permutation coefficent is greater than the nominal coefficent so can increment their counts
-            nomResults$numPermExceed[which(abs(mergedStat[, 3]) >= abs(mergedStat[, 2]))] <- nomResults$numPermExceed[which(abs(mergedStat[, 
+            nomResults$numPermExceed.Variant[which(abs(mergedStat[, 3]) >= abs(mergedStat[, 2]))] <- nomResults$numPermExceed.Variant[which(abs(mergedStat[, 
                 3]) >= abs(mergedStat[, 2]))] + 1
+            
+            if(isTRUE(altAll)) {
+              mergedStat <- join(nomResults[, c("id", "Interaction.statistic")], fitStats[, c("id", "Interaction.statistic")], by = "id", 
+                                 type = "left")
+              
+              # get rows where the permutation coefficent is greater than the nominal coefficent so can increment their counts
+              nomResults$numPermExceed.Interaction[which(abs(mergedStat[, 3]) >= abs(mergedStat[, 2]))] <- nomResults$numPermExceed.Interaction[which(abs(mergedStat[, 
+                 3]) >= abs(mergedStat[, 2]))] + 1
+            }
             
             
         }

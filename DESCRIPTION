@@ -16,7 +16,8 @@ Depends:
   ggpubr,
   plyr,
   dplyr,
+  purrr,
+  broom,
   reshape2,
   rtracklayer,
-  speedglm,
   stringr
