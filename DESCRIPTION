@@ -18,6 +18,7 @@ Depends:
   dplyr,
   purrr,
   broom,
+  tidyr,
   reshape2,
   rtracklayer,
   stringr

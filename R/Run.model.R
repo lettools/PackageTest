@@ -129,7 +129,11 @@ Run.Model <- function(inputObj, output_prefix, task = 1, totalTasks = 1, minInd 
                   # print(Sys.time())
                   while (totalPerms <= numPerms) {
                     # get just nominal signif
-                    toPerm <- theseResults[which(theseResults$Variant.p.value < pval_threshold & theseResults$numPermExceed < 5), ]
+                    toPerm <- theseResults[which(theseResults$Variant.p.value < pval_threshold & theseResults$numPermExceed.Variant < 5), ]
+                    if(isTRUE(other_all))
+                    {
+                      toPerm <- theseResults[which(theseResults$Variant.p.value < pval_threshold & theseResults$numPermExceed.Variant < 5 & theseResults$numPermExceed.Interaction < 5), ]
+                    }
                     numLeft <- dim(toPerm)[1]
                     # cat(paste(c(totalPerms, '\n'), collapse=' '))
                     
@@ -145,7 +149,8 @@ Run.Model <- function(inputObj, output_prefix, task = 1, totalTasks = 1, minInd 
                     totalPerms <- totalPerms + perms
                   }
                 }
-                results <- rbind.fill(results, theseResults[which(theseResults$Variant_p <= 1), ])
+                #results <- rbind.fill(results, theseResults[which(theseResults$Variant_p <= 1), ])
+                results <- rbind.fill(results, theseResults)
             }
             # if increment here, only increments if the loop completes.
             i.end.time <- Sys.time()
