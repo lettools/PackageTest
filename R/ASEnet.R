@@ -1,7 +1,7 @@
 #' 
 #' ASEnet
 #' 
-#' Machine learning algorithms to predict chromosome-level gene expreassion from allele specific rSNPs
+#' Machine learning algorithms to predict chromosome-level gene expression from allele specific rSNPs
 #' 
 #' Train.ASEnet: This function allows for the creation of chromosome-level gene expression 
 #' predictive models based on the implementation of the lasso and elastic net penalised regression methodologies. 
@@ -15,7 +15,8 @@
 #'                    either side of the transcript start site. Defaults to 500kb
 #' 
 #'           alpha - elastic net mixing parameter: 
-#'                   a value of 1 adds the lasso penalty, while a value of 0 adds the ridge penalty, default of 0.5 for elastic net
+#'                   a value of 1 adds the lasso penalty, while a value of 0 adds the ridge penalty, default of 0.5 for 
+#'                   elastic net
 #' 
 #' 
 #' Predict.ASEnet: Uses output model generated in Train.ASEnet, as well as chromosome-level rSNP data to make 
@@ -26,8 +27,8 @@
 #'           ref/altModel - Rdata file, output of the Train.Asenet function, containing the reference alnd alternative 
 #'                          ASE models built
 #'                          
-#'           newHaps - Rdata file containing the haplotypes of both reference and alternative alleles of a new study indovidual.
-#'                     rSNPs must match those used for training (function recognises them by name)
+#'           newHaps - Rdata file containing the haplotypes of both reference and alternative alleles of a new study 
+#'                     individual. rSNPs must match those used for training (function recognises them by name)
 #'                     
 #' 
 #' Dependencies:
@@ -35,13 +36,11 @@
 #'             library(dplyr)
 #'           
 #'             library(glmnet)
-#' 
-#' 
+#'             
 #' 
 
+
 Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
-  
-  
   
   
   # filter out infromation needed from Gene.Input output
@@ -53,6 +52,10 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
   ASE <- select(gen_input$ASE, ID, end, TSS, Gene, Ind, refCount, altCount)
   
   ASE <- ASE[order(ASE$TSS),]
+  
+  totReads <- gen_input$counts
+  
+  totReads <- totReads[order(totReads$Ind),]
   
   #' iterate through every unique gene available, taking TSSwin to look for nearby rSNPs, then train
   #' each ASE
@@ -66,7 +69,7 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
     
     currGene <- as.character(unique(ASE$Gene)[[i]]) # current ASE gene
     
-    # here the code is using the lowest of the TSS for each gene, might have to change this (ask James)
+    # here the code is using the lowest of the TSS for each gene, might have to change this? (ask James)
     
     currTSS <- min(ASE$TSS[which(ASE$Gene == unique(ASE$Gene)[[i]])])
     
@@ -92,6 +95,26 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
       
     currASE <- snpASE[which(snpASE$ID == unique(snpASE$ID)[j]),] # ASE data on current ASE site
     
+    currTot <- totReads[which(totReads$Ind %in% currASE$Ind),]
+    
+    
+    # put total count data in correct format to normalise in next step
+    x <-2
+    while (x <= nrow(currTot)) {
+      
+      currTot[x-1,3] <- currTot[x,2] 
+      
+      x <- x +2
+      
+    }
+    
+    currTot <-currTot[which(currTot$All != 1),]
+    
+    colnames(currTot) <- c("Ind","refCount","altCount")
+    
+    #normalise
+    currASE <- transform(currASE, totRef = currTot$refCount,totAlt= currTot$altCount, refCountN = currASE$refCount / currTot$refCount, altCountN = currASE$altCount / currTot$altCount)
+    
     cat("\nCurrent ASE site: ",unique(snpASE$ID)[j])
     
     # nearby variants of the reference alleles on that ASE site
@@ -104,7 +127,7 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
       
       cat(" - ",length(currASE[,6])," ASE data points used for reference model ")
     
-      refModel[[currGene]][[unique(snpASE$ID)[j]]] <- glmnet(currVarsR,currASE[,6], alpha=alpha)
+      refModel[[currGene]][[unique(snpASE$ID)[j]]] <- glmnet(currVarsR,currASEN[,10], alpha=alpha)
     
     }
     
@@ -118,7 +141,7 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
       
       cat(" - ",length(currASE[,7])," ASE data points used for alternative model ")
       
-      altModel[[currGene]][[unique(snpASE$ID)[j]]] <- glmnet(currVarsA,currASE[,7], alpha=alpha)
+      altModel[[currGene]][[unique(snpASE$ID)[j]]] <- glmnet(currVarsA,currASEN[,11], alpha=alpha)
       
     }
     
