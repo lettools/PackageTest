@@ -24,8 +24,7 @@
 #' 
 #' Arguments:
 #' 
-#'           ref/altModel - Rdata file, output of the Train.Asenet function, containing the reference alnd alternative 
-#'                          ASE models built
+#'           ASEModel - Rdata file, output of the Train.Asenet function, containing the ASE model built
 #'                          
 #'           newHaps - Rdata file containing the haplotypes of both reference and alternative alleles of a new study 
 #'                     individual. rSNPs must match those used for training (function recognises them by name)
@@ -59,10 +58,9 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
   
   #' iterate through every unique gene available, taking TSSwin to look for nearby rSNPs, then train
   #' each ASE
-
-  refModel <- list()
-  altModel <- list()
-    
+  
+  ASEModel <- list()
+  
   i <- 1
   
   while (i <= length(unique(ASE$Gene))) {
@@ -81,85 +79,68 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
     snpASE <- ASE[which(ASE$Gene == currGene),] # ASE data on that gene
     
     # nearby variants of the reference alleles on that gene
-    nearVarsR <- t(rSNPs[which(rSNPs$end %in% tempRange), which(colnames(rSNPs) %in% snpASE$Ind)]) 
+    nearVarsR <- t(rSNPs[which(rSNPs$end %in% tempRange), which(colnames(rSNPs) %in% snpASE$Ind),drop = FALSE]) 
     
     # nearby variants of the alternative alleles on that gene
-    nearVarsA <- t(rSNPs[which(rSNPs$end %in% tempRange), which(colnames(rSNPs) %in% snpASE$Ind)+1]) 
+    nearVarsA <- t(rSNPs[which(rSNPs$end %in% tempRange), which(colnames(rSNPs) %in% snpASE$Ind)+1,drop = FALSE])
     
-    if (nrow(nearVarsR) > 1){
     
     j <- 1
     
     
     while (j <= length(unique(snpASE$ID))) { #iterate through all ASE sites of a gene
       
-    currASE <- snpASE[which(snpASE$ID == unique(snpASE$ID)[j]),] # ASE data on current ASE site
-    
-    currTot <- totReads[which(totReads$Ind %in% currASE$Ind),]
-    
-    
-    # put total count data in correct format to normalise in next step
-    x <-2
-    while (x <= nrow(currTot)) {
+      currASE <- snpASE[which(snpASE$ID == unique(snpASE$ID)[j]),] # ASE data on current ASE site
       
-      currTot[x-1,3] <- currTot[x,2] 
+      currTot <- totReads[which(totReads$Ind %in% currASE$Ind),]
       
-      x <- x +2
       
-    }
-    
-    currTot <-currTot[which(currTot$All != 1),]
-    
-    colnames(currTot) <- c("Ind","refCount","altCount")
-    
-    #normalise
-    currASE <- transform(currASE, totRef = currTot$refCount,totAlt= currTot$altCount, refCountN = currASE$refCount / currTot$refCount, altCountN = currASE$altCount / currTot$altCount)
-    
-    cat("\nCurrent ASE site: ",unique(snpASE$ID)[j])
-    
-    # nearby variants of the reference alleles on that ASE site
-    currVarsR <- as.matrix(nearVarsR[which(rownames(nearVarsR) %in% currASE$Ind),]) 
-    
-    # nearby variants of the alternative alleles on that ASE site
-    currVarsA <- as.matrix(nearVarsA[which(rownames(nearVarsR) %in% currASE$Ind),])
-    
-    if (length(unique(currASE[,6])) > 1){
+      # put total count data in correct format to normalise in next step
+      x <-2
+      while (x <= nrow(currTot)) {
+        
+        currTot[x-1,3] <- currTot[x,2] 
+        
+        x <- x +2
+        
+      }
       
-      cat(" - ",length(currASE[,6])," ASE data points used for reference model ")
-    
-      refModel[[currGene]][[unique(snpASE$ID)[j]]] <- glmnet(currVarsR,currASEN[,10], alpha=alpha)
-    
-    }
-    
-    else{
+      currTot <-currTot[which(currTot$All != 1),]
       
-      cat("\n[ Warning - not enough ASE data points to create a model for the reference allele of this ASE site ]")
+      colnames(currTot) <- c("Ind","refCount","altCount")
       
-    }
-    
-    if (length(unique(currASE[,7])) > 1){
+      #normalise
+      currASE <- transform(currASE, totRef = currTot$refCount,totAlt= currTot$altCount,
+                           refCountN = currASE$refCount / currTot$refCount, altCountN = currASE$altCount / currTot$altCount)
       
-      cat(" - ",length(currASE[,7])," ASE data points used for alternative model ")
+      cat("\nCurrent ASE site: ",unique(snpASE$ID)[j])
       
-      altModel[[currGene]][[unique(snpASE$ID)[j]]] <- glmnet(currVarsA,currASEN[,11], alpha=alpha)
       
-    }
-    
-    else{
+      # nearby variants of the reference alleles on that ASE site
+      currVarsR <- as.matrix(nearVarsR[which(rownames(nearVarsR) %in% currASE$Ind),,drop = FALSE]) 
       
-      cat("\n[ Warning - not enough ASE data points to create a model for the alternative allele of this ASE site ]")
+      # nearby variants of the alternative alleles on that ASE site
+      currVarsA <- as.matrix(nearVarsA[which(rownames(nearVarsR) %in% currASE$Ind),,drop = FALSE])
       
-    }
-    
-    j <- j+1
-    
-    }
-    
-    }
-    
-    else{
+      #join currVars and modify currASE for a unified model
+      currVars <- rbind(currVarsR,currVarsA)
+      currASET <- rbind(as.matrix(currASE$refCountN),as.matrix(currASE$altCountN))
       
-      cat(" [ Warning - not enough ASE data points to create a model for this gene ]")
+      if (length(unique(currASET)) > 1){
+        
+        cat(" - ",length(currASET)," ASE data points used for model ")
+        
+        ASEModel[[currGene]][[unique(snpASE$ID)[j]]] <- glmnet(currVars,currASET, alpha=alpha)
+        
+      }
+      
+      else{
+        
+        cat("\n[ Warning - not enough ASE data points to create a model of this ASE site ]")
+        
+      }
+      
+      j <- j+1
       
     }
     
@@ -167,39 +148,42 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
     
   }
   
-  cat("\n\nReference and alternative models trained for this chromosome!\n\nSaving model files...")
+  cat("\n\nASE model trained for this chromosome!\n\nSaving model file...")
   
-  save(refModel, file = "./refModel.rda")
-  save(altModel, file = "./altModel.rda")
+  save(ASEModel, file = "./ASEModel.rda")
   
 }
 
-Predict.ASEnet <- function(refModel,altModel,newHaps){
-  
-  library(glmnet)
+Predict.ASEnet <- function(ASEmodel,newHaps){
   
   # loop over models, looking for corresponding rSNPs to predict ASE
   
-  predictASERef <- list()
-  predictASEAlt <- list()
+  allele0 <- list()
+  allele1 <- list()
   
   i <- 1
   
-  while (i<length(refModel)) {
+  while (i<length(ASEModel)) {
     
-    cat("\n",round(i/length(refModel)*100)," % completed >> Predicting ASE of gene ", names(refModel)[i])
+    cat("\n",round(i/length(ASEModel)*100)," % completed >> Predicting ASE of gene ", names(ASEModel)[i])
     
     j <-1
     
-    while (j<=length(refModel[[i]])) {
+    while (j<=length(ASEModel[[i]])) {
       
-      cat("\nPredicting reference ASE counts of site:", names(refModel[[i]])[j])
+      cat("\nPredicting ASE counts of site:", names(ASEModel[[i]])[j])
       
-      newVars <- t(newHaps[which(rownames(newHaps) %in% refModel[[i]][[j]][["beta"]]@Dimnames[[1]]),1])
+      newVars <- t(newHaps[which(rownames(newHaps) %in% ASEModel[[i]][[j]][["beta"]]@Dimnames[[1]]),c(1,2)])
       
-      predictASERef[[names(refModel)[i]]][[names(refModel[[i]])[j]]] <- predict(refModel[[i]][[j]],newVars, s=80)
+      # results for all different lambdas saved
+      allele0[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]] <- predict(ASEModel[[i]][[j]],t(newVars[1,]))
+      allele1[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]] <- predict(ASEModel[[i]][[j]],t(newVars[2,]))
       
-      cat(" >> Prediction:", predictASERef[[names(refModel)[i]]][[names(refModel[[i]])[j]]])
+      # results from last lambda used shown
+      cat(" >> Prediction of allele 1:", allele0[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]]
+          [length(allele0[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]])])
+      cat(" >> Prediction of allele 2:", allele1[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]]
+          [length(allele1[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]])])
       
       j <- j+1
       
@@ -209,34 +193,8 @@ Predict.ASEnet <- function(refModel,altModel,newHaps){
     
   }
   
-  i <- 1
+  ASEpredict <-list(allele0 = allele0,allele1 = allele1)
   
-  while (i<length(altModel)) {
-    
-    cat("\n",round(i/length(altModel)*100)," % completed >> Predicting ASE of gene ", names(altModel)[i])
-    
-    j <-1
-    
-    while (j<=length(altModel[[i]])) {
-      
-      cat("\nPredicting alternative ASE counts of site:", names(altModel[[i]])[j])
-      
-      newVars <- t(newHaps[which(rownames(newHaps) %in% altModel[[i]][[j]][["beta"]]@Dimnames[[1]]),2])
-      
-        predictASEAlt[[names(altModel)[i]]][[names(altModel[[i]])[j]]] <- predict(altModel[[i]][[j]],newVars, s=80)
-        
-        cat(" >> Prediction:", predictASEAlt[[names(altModel)[i]]][[names(altModel[[i]])[j]]])
-      
-      j <- j+1
-      
-    }
-    
-    i <- i+1
-    
-  }
-
-  save(predictASERef, file = "./predictASERef.rda")
-  save(predictASEAlt, file = "./predictASEAlt.rda")
-  
+  save(ASEpredict, file = "./predictASE.rda")
   
 }
