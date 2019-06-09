@@ -1,118 +1,72 @@
-
 #' 
 #' ASEnet_app
 #' 
-#' Interface to run ASEnet functions on a desktop environment
+#' Shiny Web interface to run ASEnet functions
 #' 
 #' Dependencies:
 #' 
 #'             ASEnet.R must be in same directory
 #'             
-#'             system must support tcltk interfaces (default in linux/windows/mac)
+#'             library(shiny)
 #'             
-#'             library(gWidgets2)
 #'             
-#'             library(gWidgets2tcltk)
-#' 
-#'
 
-# settings
+ui <- fluidPage(
+  
+  titlePanel("ASEnet"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      p("Welcome to ASEnet, an R application designed to predict gene expression from nearby variants on the genome"),
+                 
+      p("In it's default mode, ASEnet uses allele specific regulatory variants and expression to build the expression model,
+      but it is also capable of performing modelling based on the sum of regulatory variant haplotypes and 
+      total gene expression from both alleles"),
+    
+      p("Data required for the modelling: output from gen.Input function from 
+      the packagetest package from the lettols gitHub repository")),
+    
+    mainPanel(
+      
+      h4("Model Training"),
+      
+      fileInput("aseDat", "Choose aseDat file",
+                accept = ".rda"
+      ),
+      
+      
+      selectInput("ASEmode", "Choose a modelling method:",
+                  list("Chromosome-level information (allele-specific)", 
+                       "Genotype-level information (non-allele-specific)")
+      ),textOutput("mode"),
+      
+      
+      actionButton("do", "Click Me"),
+      textOutput("modelTraining")
+      
+      
+    )
+  )
+)
 
-options(guiToolkit="tcltk")
-source('./ASEnet.R')
+server <- function(input, output) {
+  
+  options(shiny.maxRequestSize=6000*1024^2)
+  
+  observeEvent(input$do, {
+  
+    source("./ASEnet.R")
+  
+    aseDat <- input$aseDat
+  
+    mode <-output$mode
+  
+    if(mode == "Chromosome-level information (allele-specific)"){mode <- 1} else {mode <- 0}
+  
+    Train.ASEnet(aseDat,ASEmode = mode)
+    
+  })
+    
+}
 
-## containers
-
-win <- gwindow("ASEnet", visible=FALSE) 
-gp <- gvbox(container=win)
-
-## control 
-
-glabel("Train", container = gp)
-
-load <- gbutton("Load ASE data", container=gp)
-
-train <- gbutton("Train elastic net model on this data", container=gp)
-
-glabel("Predict", container = gp)
-
-selrefModel <- gbutton("Load reference allele model", container=gp)
-selaltModel <- gbutton("Load alternative allele model", container=gp)
-
-selnewHaps <- gbutton("Load new haplotypes", container=gp)
-
-predict <- gbutton("Predict ASE", container=gp)
-
-## interactivity
-
-addHandlerClicked(load, handler=function(h,...) {
-  
-  aseDatFile <- gfile()
-  
-  x <- 1
-  
-  glabel("ASE file loaded:", container = gp)
-  
-  load(aseDatFile,.GlobalEnv)
-  
-  glabel(aseDatFile, container = gp)
-  
-})
-
-addHandlerClicked(train, handler=function(h,...) {
-  
-  Train.ASEnet(aseDat)
-  
-  gmessage("Models created, please check source folder")
-  
-})
-
-addHandlerClicked(selrefModel, handler=function(h,...) {
-  
-  refModelFile <- gfile()
-  
-  load(refModelFile,.GlobalEnv)
-  
-  glabel("Ref model loaded:", container = gp)
-  
-  glabel(refModelFile, container = gp)
-  
-  
-})
-
-addHandlerClicked(selaltModel, handler=function(h,...) {
-  
-  altModelFile <- gfile()
-  
-  load(altModelFile,.GlobalEnv)
-  
-  glabel("Alt model loaded:", container = gp)
-  
-  glabel(altModelFile, container = gp)
-  
-  
-})
-
-addHandlerClicked(selnewHaps, handler=function(h,...) {
-  
-  newHapsFile <- gfile()
-  
-  load(newHapsFile,.GlobalEnv)
-  
-  glabel("New haplotypes loaded:", container = gp)
-  
-  glabel(newHapsFile, container = gp)
-  
-})
-
-addHandlerClicked(predict, handler=function(h,...) {
-  
-  Predict.ASEnet(refModel,altModel,newHaps)
-  
-  gmessage("Predictions made, please check source folder")
-  
-})
-
-## view app
-
-visible(win) <- TRUE
+shinyApp(ui = ui, server = server)

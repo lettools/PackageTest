@@ -17,6 +17,8 @@
 #'           alpha - elastic net mixing parameter: 
 #'                   a value of 1 adds the lasso penalty, while a value of 0 adds the ridge penalty, default of 0.5 for 
 #'                   elastic net
+#'                   
+#'           ASEmode - 1 for modelling of allele specific expression, 0 for genotype level modelling (like prediXcan)
 #' 
 #' 
 #' Predict.ASEnet: Uses output model generated in Train.ASEnet, as well as chromosome-level rSNP data to make 
@@ -24,10 +26,13 @@
 #' 
 #' Arguments:
 #' 
-#'           ASEModel - Rdata file, output of the Train.Asenet function, containing the ASE model built
+#'           Model - Rdata file, output of the Train.Asenet function, containing the model built
 #'                          
-#'           newHaps - Rdata file containing the haplotypes of both reference and alternative alleles of a new study 
-#'                     individual. rSNPs must match those used for training (function recognises them by name)
+#'           newHaps - Rdata file containing the haplotypes of both reference and alternative alleles 
+#'           (or combined genotype-level information) of a new study individual. rSNPs must match those used for training
+#'           (function recognises them by name)
+#'                     
+#'           ASEmode - 1 for predicting of allele specific expression, 0 for genotype level modelling (like prediXcan)           
 #'                     
 #' 
 #' Dependencies:
@@ -39,12 +44,12 @@
 #' 
 
 
-Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
+Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1){
   
   
   # filter out infromation needed from Gene.Input output
   
-  cat("\n Welcome to ASEnet, let's train a model for each gene using nearby variants and SNP ASE ...\n")
+  cat("\n Welcome to ASEnet, let's train a model for each gene using nearby variants and SNP corresponding expression values ...\n")
   
   rSNPs <- data.frame(ID=gen_input$leg$ID, end=gen_input$leg$end, gen_input$haps)
   
@@ -83,7 +88,7 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
     
     # nearby variants of the alternative alleles on that gene
     nearVarsA <- t(rSNPs[which(rSNPs$end %in% tempRange), which(colnames(rSNPs) %in% snpASE$Ind)+1,drop = FALSE])
-    
+
     
     j <- 1
     
@@ -122,13 +127,26 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
       # nearby variants of the alternative alleles on that ASE site
       currVarsA <- as.matrix(nearVarsA[which(rownames(nearVarsR) %in% currASE$Ind),,drop = FALSE])
       
-      #join currVars and modify currASE for a unified model
-      currVars <- rbind(currVarsR,currVarsA)
-      currASET <- rbind(as.matrix(currASE$refCountN),as.matrix(currASE$altCountN))
+      # ASE mode
+      if (ASEmode == 1){
+        
+        #join currVars and modify currASE for a unified model
+        currVars <- rbind(currVarsR,currVarsA)
+        currASET <- rbind(as.matrix(currASE$refCountN),as.matrix(currASE$altCountN))
+        
+        
+      # PREDIXCAN mode
+      }else{
+        
+        # sum both haplotypes for each rSNP and both expression levels in each ASE SNP
+        currVars <-  currVarsR + currVarsA
+        currASET <- as.matrix(currASE$refCountN) + as.matrix(currASE$altCountN)
+        
+      }
       
       if (length(unique(currASET)) > 1){
         
-        cat(" - ",length(currASET)," ASE data points used for model ")
+        cat(" - ",length(currASET)," data points used for model ")
         
         ASEModel[[currGene]][[unique(snpASE$ID)[j]]] <- glmnet(currVars,currASET, alpha=alpha)
         
@@ -136,7 +154,7 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
       
       else{
         
-        cat("\n[ Warning - not enough ASE data points to create a model of this ASE site ]")
+        cat("\n[ Warning - not enoughdata points to create a model of this expression for this site ]")
         
       }
       
@@ -148,13 +166,28 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5){
     
   }
   
-  cat("\n\nASE model trained for this chromosome!\n\nSaving model file...")
+  if (ASEmode == 1){
   
-  save(ASEModel, file = "./ASEModel.rda")
+    cat("\n\nASE model trained for this chromosome!\n\nSaving model file...")
+  
+    save(ASEModel, file = "./ASEModel.rda")
+  
+  }else{
+    
+    cat("\n\nExpression model trained for this chromosome!\n\nSaving model file...")
+    
+    EModel <- ASEModel
+    
+    save(EModel, file = "./EModel.rda")
+    
+    
+  }
   
 }
 
-Predict.ASEnet <- function(ASEmodel,newHaps){
+Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
+  
+  if (ASEmode == 1){
   
   # loop over models, looking for corresponding rSNPs to predict ASE
   
@@ -163,27 +196,27 @@ Predict.ASEnet <- function(ASEmodel,newHaps){
   
   i <- 1
   
-  while (i<length(ASEModel)) {
+  while (i<length(Model)) {
     
-    cat("\n",round(i/length(ASEModel)*100)," % completed >> Predicting ASE of gene ", names(ASEModel)[i])
+    cat("\n",round(i/length(Model)*100)," % completed >> Predicting ASE of gene ", names(Model)[i])
     
     j <-1
     
-    while (j<=length(ASEModel[[i]])) {
+    while (j<=length(Model[[i]])) {
       
-      cat("\nPredicting ASE counts of site:", names(ASEModel[[i]])[j])
+      cat("\nPredicting ASE counts of site:", names(Model[[i]])[j])
       
-      newVars <- t(newHaps[which(rownames(newHaps) %in% ASEModel[[i]][[j]][["beta"]]@Dimnames[[1]]),c(1,2)])
+      newVars <- t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["beta"]]@Dimnames[[1]]),c(1,2)])
       
       # results for all different lambdas saved
-      allele0[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]] <- predict(ASEModel[[i]][[j]],t(newVars[1,]))
-      allele1[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]] <- predict(ASEModel[[i]][[j]],t(newVars[2,]))
+      allele0[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]],t(newVars[1,]))
+      allele1[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]],t(newVars[2,]))
       
       # results from last lambda used shown
-      cat(" >> Prediction of allele 1:", allele0[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]]
-          [length(allele0[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]])])
-      cat(" >> Prediction of allele 2:", allele1[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]]
-          [length(allele1[[names(ASEModel)[i]]][[names(ASEModel[[i]])[j]]])])
+      cat(" >> Prediction of allele 1:", allele0[[names(Model)[i]]][[names(Model[[i]])[j]]]
+          [length(allele0[[names(Model)[i]]][[names(Model[[i]])[j]]])])
+      cat(" >> Prediction of allele 2:", allele1[[names(Model)[i]]][[names(Model[[i]])[j]]]
+          [length(allele1[[names(Model)[i]]][[names(Model[[i]])[j]]])])
       
       j <- j+1
       
@@ -195,6 +228,48 @@ Predict.ASEnet <- function(ASEmodel,newHaps){
   
   ASEpredict <-list(allele0 = allele0,allele1 = allele1)
   
-  save(ASEpredict, file = "./predictASE.rda")
+  save(ASEpredict, file = "./ASEpredict.rda")
   
+  cat("\nASE predictions made! Please,check your source folder")
+  
+  }else{
+    
+    # loop over models, looking for corresponding rSNPs to predict genotype level expression
+    
+    Epredict <- list()
+    
+    i <- 1
+    
+    while (i<length(Model)) {
+      
+      cat("\n",round(i/length(Model)*100)," % completed >> Predicting expression of gene ", names(Model)[i])
+      
+      j <-1
+      
+      while (j<=length(Model[[i]])) {
+        
+        cat("\nPredicting expression counts of site:", names(Model[[i]])[j])
+        
+        newVars <- t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["beta"]]@Dimnames[[1]])])
+        
+        # results for all different lambdas saved
+        Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]],t(newVars[1,]))
+        
+        # results from last lambda used shown
+        cat(" >> Prediction :", Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]]
+            [length(Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]])])
+        
+        j <- j+1
+        
+      }
+      
+      i <- i+1
+      
+    }
+    
+    save(Epredict, file = "./Epredict.rda")
+    
+    cat("\nPredictions made! Please,check your source folder")
+ 
+  }
 }
