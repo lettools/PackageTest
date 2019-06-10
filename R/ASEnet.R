@@ -159,7 +159,7 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1, min
       
       else{
         
-        cat("\n[ Warning - not enoughdata points to create a model of this expression for this site ]")
+        cat("\n[ Warning - not enough data points to create a model of this expression for this site ]")
         
       }
       
@@ -201,7 +201,7 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
   
   i <- 1
   
-  while (i<length(Model)) {
+  while (i<=length(Model)) {
     
     cat("\n",round(i/length(Model)*100)," % completed >> Predicting ASE of gene ", names(Model)[i])
     
@@ -242,7 +242,7 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
     
     i <- 1
     
-    while (i<length(Model)) {
+    while (i<=length(Model)) {
       
       cat("\n",round(i/length(Model)*100)," % completed >> Predicting expression of gene ", names(Model)[i])
       
@@ -272,4 +272,33 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
     cat("\nPredictions made! Please,check your source folder")
  
   }
+}
+
+Plot.ASEnet <-function(Model){
+  
+  mcve <- list()
+  
+  i <- 1
+  
+  while (i<=length(Model)) {
+    
+    j <-1
+    
+    while (j<=length(Model[[i]])) {
+      
+      mcve[["Sites"]][[length(mcve[["Sites"]])+1]] <- names(Model[[i]])[j]
+      
+      mcve[["mcve"]][[length(mcve[["mcve"]])+1]] <- ASEModel[[i]][[j]]$cvm[which(ASEModel[[i]][[j]]$lambda == ASEModel[[i]][[j]]$lambda.min)]
+      
+      j <- j+1
+      
+    }
+    
+    i <- i+1
+    
+  }
+  
+  #have to make it prettier and documentation (maybe add display options)
+  plot(mcve$mcve,ylab="MCVE", main="Mean cross validated error per expression site")
+  
 }
