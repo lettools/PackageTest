@@ -19,6 +19,11 @@
 #'                   elastic net
 #'                   
 #'           ASEmode - 1 for modelling of allele specific expression, 0 for genotype level modelling (like prediXcan)
+#'           
+#'           min - minimum number of ASE data points to create each SNP expression model 
+#'                 (set to 10 to be able to perform 10 fold cv)
+#'                 
+#'           nfolds - number of cross validation folds (must match or exceed min value)
 #' 
 #' 
 #' Predict.ASEnet: Uses output model generated in Train.ASEnet, as well as chromosome-level rSNP data to make 
@@ -44,7 +49,7 @@
 #' 
 
 
-Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1){
+Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1, min=10, nfolds = 10){
   
   
   # filter out infromation needed from Gene.Input output
@@ -144,11 +149,11 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1){
         
       }
       
-      if (length(unique(currASET)) > 1){
+      if (length(unique(currASET)) >= min){
         
         cat(" - ",length(currASET)," data points used for model ")
         
-        ASEModel[[currGene]][[unique(snpASE$ID)[j]]] <- glmnet(currVars,currASET, alpha=alpha)
+        ASEModel[[currGene]][[unique(snpASE$ID)[j]]] <- cv.glmnet(currVars,currASET, alpha=alpha, nfolds=nfolds)
         
       }
       
@@ -206,11 +211,11 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
       
       cat("\nPredicting ASE counts of site:", names(Model[[i]])[j])
       
-      newVars <- t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["beta"]]@Dimnames[[1]]),c(1,2)])
+      newVars <- t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["glmnet.fit"]][["beta"]]@Dimnames[[1]]),c(1,2)])
       
       # results for all different lambdas saved
-      allele0[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]],t(newVars[1,]))
-      allele1[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]],t(newVars[2,]))
+      allele0[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]][["glmnet.fit"]],t(newVars[1,]))
+      allele1[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]][["glmnet.fit"]],t(newVars[2,]))
       
       # results from last lambda used shown
       cat(" >> Prediction of allele 1:", allele0[[names(Model)[i]]][[names(Model[[i]])[j]]]
@@ -250,10 +255,10 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
         
         cat("\nPredicting expression counts of site:", names(Model[[i]])[j])
         
-        newVars <- t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["beta"]]@Dimnames[[1]])])
+        newVars <- t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["glmnet.fit"]][["beta"]]@Dimnames[[1]])])
         
         # results for all different lambdas saved
-        Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]],t(newVars[1,]))
+        Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]][["glmnet.fit"]],t(newVars[1,]))
         
         # results from last lambda used shown
         cat(" >> Prediction :", Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]]
