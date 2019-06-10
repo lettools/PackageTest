@@ -213,15 +213,12 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
       
       newVars <- t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["glmnet.fit"]][["beta"]]@Dimnames[[1]]),c(1,2)])
       
-      # results for all different lambdas saved
-      allele0[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]][["glmnet.fit"]],t(newVars[1,]))
-      allele1[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]][["glmnet.fit"]],t(newVars[2,]))
+      # result for lamda.min saved
+      allele0[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]],t(newVars[1,]),s="lambda.min")
+      allele1[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]],t(newVars[2,]),s="lambda.min")
       
-      # results from last lambda used shown
-      cat(" >> Prediction of allele 1:", allele0[[names(Model)[i]]][[names(Model[[i]])[j]]]
-          [length(allele0[[names(Model)[i]]][[names(Model[[i]])[j]]])])
-      cat(" >> Prediction of allele 2:", allele1[[names(Model)[i]]][[names(Model[[i]])[j]]]
-          [length(allele1[[names(Model)[i]]][[names(Model[[i]])[j]]])])
+      cat(" >> Prediction of allele 1:", allele0[[names(Model)[i]]][[names(Model[[i]])[j]]])
+      cat(" >> Prediction of allele 2:", allele1[[names(Model)[i]]][[names(Model[[i]])[j]]])
       
       j <- j+1
       
@@ -257,12 +254,10 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
         
         newVars <- t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["glmnet.fit"]][["beta"]]@Dimnames[[1]])])
         
-        # results for all different lambdas saved
-        Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]][["glmnet.fit"]],t(newVars[1,]))
+        # result for lamda.min saved
+        Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]],t(newVars[1,]),s="lambda.min")
         
-        # results from last lambda used shown
-        cat(" >> Prediction :", Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]]
-            [length(Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]])])
+        cat(" >> Prediction:", allele0[[names(Model)[i]]][[names(Model[[i]])[j]]])
         
         j <- j+1
         
