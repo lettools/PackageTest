@@ -24,6 +24,9 @@
 #'                 (set to 10 to be able to perform 10 fold cv)
 #'                 
 #'           nfolds - number of cross validation folds (must match or exceed min value)
+#'           
+#'           halve - only use reference allele for modelling, to have same number of data points as genotype level 
+#'                   modelling, option needed for precise plotting as different number of data points will shift axis
 #' 
 #' 
 #' Predict.ASEnet: Uses output model generated in Train.ASEnet, as well as chromosome-level rSNP data to make 
@@ -37,8 +40,19 @@
 #'           (or combined genotype-level information) of a new study individual. rSNPs must match those used for training
 #'           (function recognises them by name)
 #'                     
-#'           ASEmode - 1 for predicting of allele specific expression, 0 for genotype level modelling (like prediXcan)           
-#'                     
+#'           ASEmode - 1 for predicting of allele specific expression, 0 for genotype level modelling (like prediXcan)  
+#'           
+#' Plot.ASEnet: Uses cross-validated models from train.ASEnet and plots mean cross validated error across the positions 
+#'              of all trained mutations
+#'              
+#'Arguments:
+#' 
+#'           EModel / ASEModel - Rdata files, output of the Train.Asenet function, containing the models built for 
+#'                              genotype level and chromosome level prediction accordingly
+#'                              
+#'           elim - upper limit of prediction error plotted 
+#'                  (important as somke values are very high, making plot unreadable)                  
+#'                
 #' 
 #' Dependencies:
 #' 
@@ -49,7 +63,7 @@
 #' 
 
 
-Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1, min=10, nfolds = 10){
+Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1, min=10, nfolds = 10, halve = 0){
   
   
   # filter out infromation needed from Gene.Input output
@@ -134,11 +148,23 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1, min
       
       # ASE mode
       if (ASEmode == 1){
+  
+        if(halve == 0){
         
-        #join currVars and modify currASE for a unified model
-        currVars <- rbind(currVarsR,currVarsA)
-        currASET <- rbind(as.matrix(currASE$refCountN),as.matrix(currASE$altCountN))
+          #join currVars and modify currASE for a unified model
+          currVars <- rbind(currVarsR,currVarsA)
+          currASET <- rbind(as.matrix(currASE$refCountN),as.matrix(currASE$altCountN))
         
+        }else{
+          
+          #only use half the data, to compare accuracy with genotype level model 
+          #(using reference allele only, might have to change this?)
+          currVars <- currVarsR
+          currASET <- as.matrix(currASE$refCountN)
+          
+          
+        }
+
         
       # PREDIXCAN mode
       }else{
@@ -172,10 +198,23 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1, min
   }
   
   if (ASEmode == 1){
+    
+    if (halve ==0){
   
-    cat("\n\nASE model trained for this chromosome!\n\nSaving model file...")
+      cat("\n\nASE model trained for this chromosome!\n\nSaving model file...")
   
-    save(ASEModel, file = "./ASEModel.rda")
+      save(ASEModel, file = "./ASEModel.rda")
+    
+    }else{
+      
+      cat("\n\nASE model trained for this chromosome!\n\nSaving model file...")
+      
+      ASEModel-Halved <- ASEModel
+      
+      save(ASEModel, file = "./ASEModel-Halved.rda")
+      
+    
+    }
   
   }else{
     
@@ -185,12 +224,13 @@ Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1, min
     
     save(EModel, file = "./EModel.rda")
     
-    
   }
   
 }
 
+
 Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
+  
   
   if (ASEmode == 1){
   
@@ -274,21 +314,24 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
   }
 }
 
-Plot.ASEnet <-function(Model){
+
+Plot.ASEnet <-function(EModel,ASEModel,aseDat, elim = 0.004){
   
-  mcve <- list()
+  
+  # Retrieving ASE mean cross validated error values
+  ASEmcve <- list()
   
   i <- 1
   
-  while (i<=length(Model)) {
+  while (i<=length(ASEModel)) {
     
     j <-1
     
-    while (j<=length(Model[[i]])) {
+    while (j<=length(ASEModel[[i]])) {
       
-      mcve[["Sites"]][[length(mcve[["Sites"]])+1]] <- names(Model[[i]])[j]
+      ASEmcve[["Sites"]][[length(ASEmcve[["Sites"]])+1]] <- names(ASEModel[[i]])[j]
       
-      mcve[["mcve"]][[length(mcve[["mcve"]])+1]] <- ASEModel[[i]][[j]]$cvm[which(ASEModel[[i]][[j]]$lambda == ASEModel[[i]][[j]]$lambda.min)]
+      ASEmcve[["mcve"]][[length(ASEmcve[["mcve"]])+1]] <- ASEModel[[i]][[j]]$cvm[which(ASEModel[[i]][[j]]$lambda == ASEModel[[i]][[j]]$lambda.min)]
       
       j <- j+1
       
@@ -298,7 +341,42 @@ Plot.ASEnet <-function(Model){
     
   }
   
-  #have to make it prettier and documentation (maybe add display options)
-  plot(mcve$mcve,ylab="MCVE", main="Mean cross validated error per expression site")
+  # Retrieving genotype level expression mean cross validated error values
+  Emcve <- list()
+  
+  i <- 1
+  
+  while (i<=length(EModel)) {
+    
+    j <-1
+    
+    while (j<=length(EModel[[i]])) {
+      
+      Emcve[["Sites"]][[length(Emcve[["Sites"]])+1]] <- names(EModel[[i]])[j]
+      
+      Emcve[["mcve"]][[length(Emcve[["mcve"]])+1]] <- 
+        EModel[[i]][[j]]$cvm[which(EModel[[i]][[j]]$lambda == EModel[[i]][[j]]$lambda.min)]
+      
+      j <- j+1
+      
+    }
+    
+    i <- i+1
+    
+  }
+  
+  #retrieving expresssion position from mutation name
+  ASEmcve[["Locations"]] <- aseDat$ASE$end[which(ASEmcve$Sites %in% aseDat$ASE$ID)]
+  ASEmcve$Locations <- ASEmcve$Locations[order(ASEmcve$Locations)]
+  
+  Emcve[["Locations"]] <- aseDat$ASE$end[which(Emcve$Sites %in% aseDat$ASE$ID)]
+  Emcve$Locations <- Emcve$Locations[order(Emcve$Locations)]
+
+  #actual plotting
+  
+  plot(ASEmcve$mcve, type="p", col="blue", pch = 0, xlab="Expression locations", 
+       ylab="Mean Cross Validated Error (proportion of expression in chromosome)", ylim=c(0,elim))
+  par(new=TRUE)
+  plot(Emcve$Locations, Emcve$mcve, type="p", col="red", pch = 4, xlab="", ylab="", axes=FALSE,ylim=c(0,elim))
   
 }
