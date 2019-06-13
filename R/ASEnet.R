@@ -387,13 +387,13 @@ Plot.ASEnet <-function(EModel,ASEModel,aseDat,type = 1, elim = 0.004){
   #actual plotting
   if (type == 1){
   
-    plot(ASEmcveP$mcve - EmcveP$mcve, type="l", xlab="Common mutations", 
+    plot(ASEmcveP$mcve - EmcveP$mcve, type="l", xlab="Common expression sites", 
          ylab="ASEModel mcve - Emodel mcve")
   
   
   }else if(type == 2){
     
-    plot(ASEmcveP$mcve, type="p", col="blue", pch = 0, xlab="Common mutations", 
+    plot(ASEmcveP$mcve, type="p", col="blue", pch = 0, xlab="Common expression sites", 
          ylab="Mean Cross Validated Error (proportion of expression in chromosome)")
     par(new=TRUE)
     plot(EmcveP$mcve, type="p", col="red", pch = 4, xlab="", ylab="", axes=FALSE)
