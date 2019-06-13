@@ -50,8 +50,8 @@
 #'           EModel / ASEModel - Rdata files, output of the Train.Asenet function, containing the models built for 
 #'                              genotype level and chromosome level prediction accordingly
 #'                              
-#'           elim - upper limit of prediction error plotted 
-#'                  (important as somke values are very high, making plot unreadable)                  
+#'           Type - Type 1 displays difference in accuracy between models across common mutations, type 2 shows actual
+#'                  mcve errors for each model across common mutations             
 #'                
 #' 
 #' Dependencies:
@@ -315,7 +315,7 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
 }
 
 
-Plot.ASEnet <-function(EModel,ASEModel,aseDat, elim = 0.004){
+Plot.ASEnet <-function(EModel,ASEModel,aseDat,type = 1, elim = 0.004){
   
   
   # Retrieving ASE mean cross validated error values
@@ -371,12 +371,33 @@ Plot.ASEnet <-function(EModel,ASEModel,aseDat, elim = 0.004){
   
   Emcve[["Locations"]] <- aseDat$ASE$end[which(Emcve$Sites %in% aseDat$ASE$ID)]
   Emcve$Locations <- Emcve$Locations[order(Emcve$Locations)]
+  
+  #get common mutations for plot
+  ASEmcveP <-list()
+  ASEmcveP[["Sites"]] <- ASEmcve$Sites[which(ASEmcve$Sites %in% Emcve$Sites)]
+  ASEmcveP[["mcve"]] <- ASEmcve$mcve[which(ASEmcve$Sites %in% Emcve$Sites)]
+  ASEmcveP[["Locations"]] <- ASEmcve$Locations[which(ASEmcve$Sites %in% Emcve$Sites)]
+  
+  EmcveP <-list()
+  EmcveP[["Sites"]] <- Emcve$Sites[which(Emcve$Sites %in% ASEmcve$Sites)]
+  EmcveP[["mcve"]] <- Emcve$mcve[which(Emcve$Sites %in% ASEmcve$Sites)]
+  EmcveP[["Locations"]] <- Emcve$Locations[which(Emcve$Sites %in% ASEmcve$Sites)]
+
 
   #actual plotting
+  if (type == 1){
   
-  plot(ASEmcve$mcve, type="p", col="blue", pch = 0, xlab="Expression locations", 
-       ylab="Mean Cross Validated Error (proportion of expression in chromosome)", ylim=c(0,elim))
-  par(new=TRUE)
-  plot(Emcve$Locations, Emcve$mcve, type="p", col="red", pch = 4, xlab="", ylab="", axes=FALSE,ylim=c(0,elim))
+    plot(ASEmcveP$mcve - EmcveP$mcve, type="l", xlab="Common mutations", 
+         ylab="ASEModel mcve - Emodel mcve")
+  
+  
+  }else if(type == 2){
+    
+    plot(ASEmcveP$mcve, type="p", col="blue", pch = 0, xlab="Common mutations", 
+         ylab="Mean Cross Validated Error (proportion of expression in chromosome)")
+    par(new=TRUE)
+    plot(EmcveP$mcve, type="p", col="red", pch = 4, xlab="", ylab="", axes=FALSE)
+    
+  }
   
 }
