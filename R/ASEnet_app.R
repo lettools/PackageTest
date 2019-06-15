@@ -67,7 +67,7 @@ server <- function(input, output) {
     
     if (ASEmode == "Chromosome-level information"){ASEmode <- 1}else{ASEmode <- 0}
     
-    TSSwin <- input$TSSwin
+    TSSwin <- input$TSSwin*1000
     
     alpha <- input$alpha
     
