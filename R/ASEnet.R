@@ -63,12 +63,15 @@
 #' 
 
 
-Train.ASEnet <- function(gen_input,TSSwin = 5e+05, alpha = 0.5, ASEmode = 1, min=10, nfolds = 10, halve = 0){
+Train.ASEnet <- function(gen_input, ASEmode = 1, TSSwin = 5e+05, alpha = 0.5, min=10, nfolds = 10, halve = 0){
   
   
   # filter out infromation needed from Gene.Input output
   
   cat("\n Welcome to ASEnet, let's train a model for each gene using nearby variants and SNP corresponding expression values ...\n")
+  
+  cat(paste("\nParameters selected: \nWindow ->", TSSwin, " \nAlpha -> ", alpha, " \nASEmode -> ", ASEmode, 
+            " \nMinumum number of expression data pints -> ", min, "\nNumber of folds for cross-validation -> ", nfolds, "\nHalve data?: ", halve, "\n"))
   
   rSNPs <- data.frame(ID=gen_input$leg$ID, end=gen_input$leg$end, gen_input$haps)
   
