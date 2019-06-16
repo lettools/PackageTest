@@ -65,11 +65,14 @@
 
 Train.ASEnet <- function(gen_input, ASEmode = 1, TSSwin = 5e+05, alpha = 0.5, min=10, nfolds = 10, halve = 0){
   
-  cat(paste("\nParameters selected: \nWindow ->", TSSwin, " \nAlpha -> ", alpha, " \nASEmode -> ", ASEmode, 
-            " \nMinumum number of expression data points -> ", min, "\nNumber of folds for cross-validation -> ", nfolds, "\nHalve data?: ", halve, "\n"))
   
   # filter out infromation needed from Gene.Input output
-
+  
+  cat("\n Welcome to ASEnet, let's train a model for each gene using nearby variants and SNP corresponding expression values ...\n")
+  
+  cat(paste("\nParameters selected: \nWindow ->", TSSwin, " \nAlpha -> ", alpha, " \nASEmode -> ", ASEmode, 
+            " \nMinumum number of expression data pints -> ", min, "\nNumber of folds for cross-validation -> ", nfolds, "\nHalve data?: ", halve, "\n"))
+  
   rSNPs <- data.frame(ID=gen_input$leg$ID, end=gen_input$leg$end, gen_input$haps)
   
   ASE <- select(gen_input$ASE, ID, end, TSS, Gene, Ind, refCount, altCount)
@@ -209,9 +212,9 @@ Train.ASEnet <- function(gen_input, ASEmode = 1, TSSwin = 5e+05, alpha = 0.5, mi
       
       cat("\n\nASE model trained for this chromosome!\n\nSaving model file...")
       
-      ASEModel_Halved <- ASEModel
+      ASEModel-Halved <- ASEModel
       
-      save(ASEModel, file = "./ASEModel_Halved.rda")
+      save(ASEModel, file = "./ASEModel-Halved.rda")
       
     
     }
@@ -230,6 +233,7 @@ Train.ASEnet <- function(gen_input, ASEmode = 1, TSSwin = 5e+05, alpha = 0.5, mi
 
 
 Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
+  
   
   if (ASEmode == 1){
   
@@ -271,7 +275,7 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
   
   save(ASEpredict, file = "./ASEpredict.rda")
   
-  cat("\n\nASE predictions made! Please,check your source folder")
+  cat("\nASE predictions made! Please,check your source folder")
   
   }else{
     
@@ -296,7 +300,7 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
         # result for lamda.min saved
         Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]] <- predict(Model[[i]][[j]],t(newVars[1,]),s="lambda.min")
         
-        cat(" >> Prediction:", Epredict[[names(Model)[i]]][[names(Model[[i]])[j]]])
+        cat(" >> Prediction:", allele0[[names(Model)[i]]][[names(Model[[i]])[j]]])
         
         j <- j+1
         
@@ -308,13 +312,13 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
     
     save(Epredict, file = "./Epredict.rda")
     
-    cat("\n\nPredictions made! Please,check your source folder")
+    cat("\nPredictions made! Please,check your source folder")
  
   }
 }
 
 
-Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, elim = 0.004){
+Plot.ASEnet <-function(EModel,ASEModel,aseDat,type = 1, elim = 0.004){
   
   
   # Retrieving ASE mean cross validated error values
@@ -388,8 +392,6 @@ Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, elim = 0.004){
   
     plot(ASEmcveP$mcve - EmcveP$mcve, type="l", xlab="Common expression sites", 
          ylab="ASEModel mcve - Emodel mcve")
-    
-    cat("\n\nPlot created, please check the plot window in RStudio")
   
   
   }else if(type == 2){
@@ -398,8 +400,6 @@ Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, elim = 0.004){
          ylab="Mean Cross Validated Error (proportion of expression in chromosome)")
     par(new=TRUE)
     plot(EmcveP$mcve, type="p", col="red", pch = 4, xlab="", ylab="", axes=FALSE)
-    
-    cat("\n\nPlot created, please check the plot window in RStudio")
     
   }
   
