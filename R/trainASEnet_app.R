@@ -68,6 +68,8 @@ server <- function(input, output) {
     
     load(input$aseDat$datapath)
     
+    library(dplyr)
+    library(glmnet)
     source("./ASEnet.R")
     
     Train.ASEnet(aseDat, ASEmode = ASEmode, TSSwin = input$TSSwin*1000, alpha = input$alpha, min = input$min, nfolds = input$nfolds, halve = halve)

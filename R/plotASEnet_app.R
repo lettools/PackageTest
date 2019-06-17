@@ -10,8 +10,6 @@
 #'             ASEnet.R must be in same directory
 #'             
 #'             library(shiny)
-#'             library(dplyr)
-#'             library(glmnet)
 #'             
 #'             
 
@@ -44,7 +42,8 @@ ui <- fluidPage(
   
   selectInput("type", "Which plot do you want to be created?",
               list("MCVE difference",
-                   "MCVE")
+                   "MCVE Ranking",
+                   "Predicted vs Observed")
   ),
 
   actionButton("do", "Plot"),
@@ -58,7 +57,9 @@ server <- function(input, output) {
   
   observeEvent(input$do, {
     
-    if (input$type == "MCVE difference"){type <- 1}else{type <- 2}
+    if (input$type == "MCVE difference"){type <- 1}
+    else if(input$type == "MCVE Ranking"){type <- 2}
+    else if(input$type == "MCVE"){type <- 3}
     
     load(input$ASEModel$datapath)
     load(input$EModel$datapath)

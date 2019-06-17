@@ -10,7 +10,6 @@
 #'             ASEnet.R must be in same directory
 #'             
 #'             library(shiny)
-#'             library(dplyr)
 #'             library(glmnet)
 #'             
 #'             
@@ -26,7 +25,7 @@ ui <- fluidPage(
     h4("Gene expression prediction"),
     
     p("This function uses a model created with the Train.ASEnet function to make predictions of the expression counts of either
-      both alleles if the model is built at the chromosome-level, or of summed expression if the model is built at the genptype-level. 
+      both alleles if the model is built at the chromosome-level, or of summed expression if the model is built at the genotype-level. 
       As input, a new chromosomal sequence of haplotypes must be provided")),
   
   selectInput("ASEmode", "Choose a prediction method: (must provide corresponding model and haplotypes)",
@@ -55,7 +54,8 @@ server <- function(input, output) {
   observeEvent(input$do, {
     
     if (input$ASEmode == "Chromosome-level"){ASEmode <- 1}else{ASEmode <- 0}
-
+    
+    library(glmnet)
     source("./ASEnet.R")
     
     load(input$Model$datapath)

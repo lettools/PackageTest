@@ -57,9 +57,7 @@
 #' Dependencies:
 #' 
 #'             library(dplyr)
-#'           
 #'             library(glmnet)
-#'             
 #' 
 
 
@@ -314,7 +312,7 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
 }
 
 
-Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, elim = 0.004){
+Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, thold=0.001){
   
   
   # Retrieving ASE mean cross validated error values
@@ -384,7 +382,7 @@ Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, elim = 0.004){
 
 
   #actual plotting
-  if (type == 1){
+  if (type == 1){ # mcve difference
   
     plot(ASEmcveP$mcve - EmcveP$mcve, type="l", xlab="Common expression sites", 
          ylab="ASEModel mcve - Emodel mcve")
@@ -392,7 +390,29 @@ Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, elim = 0.004){
     cat("\n\nPlot created, please check the plot window in RStudio")
   
   
-  }else if(type == 2){
+  }else if(type == 2){ # mcve ranked with a threshold (have to make prettier)
+    
+    errDif <-list()
+    errDif <- EmcveP$mcve - ASEmcveP$mcve
+    
+    errDif <- list(difs=errDif,sites=ASEmcveP$Sites)
+    
+    errDif$sites <- errDif$sites[order(-errDif$difs)]
+    errDif$difs <- errDif$difs[order(-errDif$difs)]
+    
+    errDif$sites <- errDif$sites[which(abs(errDif$difs)>thold)]
+    errDif$difs <- errDif$difs[which(abs(errDif$difs)>thold)]
+    
+    
+    barplot(errDif$difs,names.arg = errDif$sites, main="Common expression sites", 
+         ylab=paste("Emodel mcve - ASEModel mcve ( Ranked with a threshold of :",thold,")"),
+         las=2, cex.names=1)
+    
+    cat("\n\nPlot created, please check the plot window in RStudio")
+    
+    
+    
+  }else if(type == 3){ # actual mcve's
     
     plot(ASEmcveP$mcve, type="p", col="blue", pch = 0, xlab="Common expression sites", 
          ylab="Mean Cross Validated Error (proportion of expression in chromosome)")
