@@ -312,9 +312,11 @@ Predict.ASEnet <- function(Model,newHaps,ASEmode = 1){
 }
 
 
-Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, thold=0.001){
+Plot.ASEnet <-function(ASEModel,EModel,type = 1,thold=0.001){
   
-  
+  # Setting margins for better visibility
+  par(mar=c(6.2,6,2,2)+0.1,mgp=c(4.5,1,0)) 
+
   # Retrieving ASE mean cross validated error values
   ASEmcve <- list()
   
@@ -362,12 +364,13 @@ Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, thold=0.001){
     
   }
   
-  #retrieving expresssion position from mutation name
-  ASEmcve[["Locations"]] <- aseDat$ASE$end[which(ASEmcve$Sites %in% aseDat$ASE$ID)]
-  ASEmcve$Locations <- ASEmcve$Locations[order(ASEmcve$Locations)]
+  # # Section retrieving expresssion position from mutation name (maybe not necessary?)
   
-  Emcve[["Locations"]] <- aseDat$ASE$end[which(Emcve$Sites %in% aseDat$ASE$ID)]
-  Emcve$Locations <- Emcve$Locations[order(Emcve$Locations)]
+  # ASEmcve[["Locations"]] <- aseDat$ASE$end[which(ASEmcve$Sites %in% aseDat$ASE$ID)]
+  # ASEmcve$Locations <- ASEmcve$Locations[order(ASEmcve$Locations)]
+  # 
+  # Emcve[["Locations"]] <- aseDat$ASE$end[which(Emcve$Sites %in% aseDat$ASE$ID)]
+  # Emcve$Locations <- Emcve$Locations[order(Emcve$Locations)]
   
   #get common mutations for plot
   ASEmcveP <-list()
@@ -382,15 +385,17 @@ Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, thold=0.001){
 
 
   #actual plotting
-  if (type == 1){ # mcve difference
   
-    plot(ASEmcveP$mcve - EmcveP$mcve, type="l", xlab="Common expression sites", 
-         ylab="ASEModel mcve - Emodel mcve")
+  # mcve difference
+  if (type == 1){ 
+  
+    plot(EmcveP$mcve - ASEmcveP$mcve, type="l", xlab="Common expression sites", 
+         ylab="Emodel mcve - ASEModel mcve")
     
     cat("\n\nPlot created, please check the plot window in RStudio")
   
-  
-  }else if(type == 2){ # mcve ranked with a threshold (have to make prettier)
+  # mcve ranked with a threshold
+  }else if(type == 2){ 
     
     errDif <-list()
     errDif <- EmcveP$mcve - ASEmcveP$mcve
@@ -406,18 +411,31 @@ Plot.ASEnet <-function(ASEModel,EModel,aseDat,type = 1, thold=0.001){
     
     barplot(errDif$difs,names.arg = errDif$sites, main="Common expression sites", 
          ylab=paste("Emodel mcve - ASEModel mcve ( Ranked with a threshold of :",thold,")"),
-         las=2, cex.names=1)
+         las=2, cex.names=1, xpd = FALSE, beside=TRUE, ylim=range(pretty(c(0, errDif$difs))))
     
     cat("\n\nPlot created, please check the plot window in RStudio")
     
     
+  # actual mcve's with a threshold
+  }else if(type == 3){
     
-  }else if(type == 3){ # actual mcve's
+    blue <- rgb(0, 0, 1, alpha=0.5)
+    red <- rgb(1, 0, 0, alpha=0.5)
     
-    plot(ASEmcveP$mcve, type="p", col="blue", pch = 0, xlab="Common expression sites", 
-         ylab="Mean Cross Validated Error (proportion of expression in chromosome)")
+    commThold <- unique(c(which(abs(ASEmcveP$mcve)>thold), which(abs(EmcveP$mcve)>thold)))
+    commThold <- commThold[order(commThold)]
+    
+    ASEmcveP$Sites <- ASEmcveP$Sites[commThold]
+    ASEmcveP$mcve <- ASEmcveP$mcve[commThold]
+    EmcveP$Sites <- EmcveP$Sites[commThold]
+    EmcveP$mcve <- EmcveP$mcve[commThold]
+    
+    maxmcve <- max(max(ASEmcveP$mcve),max(EmcveP$mcve))
+    
+    barplot(EmcveP$mcve,names.arg =  ASEmcveP$Sites, main="Common expression sites", 
+            ylab="MCVE",las=2, cex.names=1, col=red, ylim=range(pretty(c(0, maxmcve))))
     par(new=TRUE)
-    plot(EmcveP$mcve, type="p", col="red", pch = 4, xlab="", ylab="", axes=FALSE)
+    barplot(ASEmcveP$mcve, col=blue, axes = FALSE, ylim=range(pretty(c(0, maxmcve))))
     
     cat("\n\nPlot created, please check the plot window in RStudio")
     

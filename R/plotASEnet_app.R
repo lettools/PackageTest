@@ -25,8 +25,7 @@ ui <- fluidPage(
     
     p("This function takes two cross validated ASEnet models and compares their accuracies across common trained expression locations.
       It outputs a plot with either the difference in mean cross validated errors between the models at each location or the actual
-      error values per model, per location (measured in proportion of total expression in each site). As an additional input, this 
-      function requires the corresponding aseDat file to correlate expression location IDs to positions in the genome.")),
+      error values per model, per location (measured in proportion of total expression in each site)")),
   
   fileInput("ASEModel", "Choose chromosome-level model file",
             accept = ".rda"
@@ -36,15 +35,16 @@ ui <- fluidPage(
             accept = ".rda"
   ),
   
-  fileInput("aseDat", "Choose aseDat file",
-            accept = ".rda"
-  ),
+  # fileInput("aseDat", "Choose aseDat file", (maybe not necessary to know the positions?)
+  #           accept = ".rda"
+  # ),
   
   selectInput("type", "Which plot do you want to be created?",
-              list("MCVE difference",
-                   "MCVE Ranking",
-                   "Predicted vs Observed")
+              list("MCVE Difference",
+                   "MCVE Difference Ranking",
+                   "MCVE")
   ),
+  numericInput("thold", "Error threshold for MCVE Difference Ranking and MCVE plots: ", 0.001),
 
   actionButton("do", "Plot"),
   p("\n"),p("\n")
@@ -57,17 +57,16 @@ server <- function(input, output) {
   
   observeEvent(input$do, {
     
-    if (input$type == "MCVE difference"){type <- 1}
-    else if(input$type == "MCVE Ranking"){type <- 2}
+    if (input$type == "MCVE Difference"){type <- 1}
+    else if(input$type == "MCVE Difference Ranking"){type <- 2}
     else if(input$type == "MCVE"){type <- 3}
     
     load(input$ASEModel$datapath)
     load(input$EModel$datapath)
-    load(input$aseDat$datapath)
     
     source("./ASEnet.R")
     
-    Plot.ASEnet(ASEModel,EModel,aseDat,type = type)
+    Plot.ASEnet(ASEModel,EModel,type = type, thold = input$thold)
     
   })
 
