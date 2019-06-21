@@ -103,11 +103,11 @@ Train.ASEnet <-
     ASE <-
       select(gen_input$ASE, ID, end, TSS, Gene, Ind, refCount, altCount)
     
-    ASE <- ASE[order(ASE$TSS),]
+    ASE <- ASE[order(ASE$TSS), ]
     
     totReads <- gen_input$counts
     
-    totReads <- totReads[order(totReads$Ind),]
+    totReads <- totReads[order(totReads$Ind), ]
     
     #' iterate through every unique gene available, taking TSSwin to look for nearby rSNPs, then train
     #' each ASE
@@ -134,7 +134,7 @@ Train.ASEnet <-
       tempRange <- seq(currTSS - TSSwin, currTSS + TSSwin)
       
       snpASE <-
-        ASE[which(ASE$Gene == currGene),] # ASE data on that gene
+        ASE[which(ASE$Gene == currGene), ] # ASE data on that gene
       
       # nearby variants of the reference alleles on that gene
       nearVarsR <-
@@ -153,9 +153,9 @@ Train.ASEnet <-
         #iterate through all ASE sites of a gene
         
         currASE <-
-          snpASE[which(snpASE$ID == unique(snpASE$ID)[j]),] # ASE data on current ASE site
+          snpASE[which(snpASE$ID == unique(snpASE$ID)[j]), ] # ASE data on current ASE site
         
-        currTot <- totReads[which(totReads$Ind %in% currASE$Ind),]
+        currTot <- totReads[which(totReads$Ind %in% currASE$Ind), ]
         
         
         # put total count data in correct format to normalise in next step
@@ -167,7 +167,7 @@ Train.ASEnet <-
           
         }
         
-        currTot <- currTot[which(currTot$All != 1),]
+        currTot <- currTot[which(currTot$All != 1), ]
         
         colnames(currTot) <- c("Ind", "refCount", "altCount")
         
@@ -229,10 +229,10 @@ Train.ASEnet <-
                       alpha = alpha,
                       nfolds = nfolds)
           
-          if(ASEmode ==1) {
+          if (ASEmode == 1) {
             if (halve == 0) {
-            ASEexp[[currGene]][[unique(snpASE$ID)[j]]] <-
-              cbind(c(currASE$Ind, paste(currASE$Ind," 
+              ASEexp[[currGene]][[unique(snpASE$ID)[j]]] <-
+                cbind(c(currASE$Ind, paste(currASE$Ind, "
                                          1", sep = "")), currASET)
             }
           }
@@ -240,7 +240,7 @@ Train.ASEnet <-
             ASEexp[[currGene]][[unique(snpASE$ID)[j]]] <-
               cbind(currASE$Ind, currASET)
           }
-  
+          
         }
         
         else{
@@ -290,54 +290,81 @@ Train.ASEnet <-
   }
 
 
-Predict.ASEnet <- function(Model, newHaps) {
-  # loop over models, looking for corresponding rSNPs to predict genotype level expression
-  
-  predict <- list()
-  
-  i <- 1
-  
-  while (i <= length(Model)) {
-    cat(
-      "\n",
-      round(i / length(Model) * 100),
-      " % completed >> Predicting expression of gene ",
-      names(Model)[i]
-    )
+Predict.ASEnet <-
+  function(Model,
+           newHaps,
+           ASEmode = 1,
+           lambda = "mincverr") {
+    # loop over models, looking for corresponding rSNPs to predict genotype level expression
     
-    j <- 1
+    predict <- list()
     
-    while (j <= length(Model[[i]])) {
-      cat("\nPredicting expression counts of site:",
-          names(Model[[i]])[j])
+    i <- 1
+    
+    while (i <= length(Model)) {
+      cat(
+        "\n",
+        round(i / length(Model) * 100),
+        " % completed >> Predicting expression of gene ",
+        names(Model)[i]
+      )
       
-      newVars <-
-        t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["glmnet.fit"]][["beta"]]@Dimnames[[1]]),])
+      j <- 1
       
-      # result for lamda.min saved
-      predict[[names(Model)[i]]][[names(Model[[i]])[j]]] <-
-        cbind(rownames(newVars),
-              predict(Model[[i]][[j]], newVars, s = "lambda.min"))
+      while (j <= length(Model[[i]])) {
+        cat("\nPredicting expression counts of site:",
+            names(Model[[i]])[j])
+        
+        newVars <-
+          t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["glmnet.fit"]][["beta"]]@Dimnames[[1]]), ])
+        
+        # selection of lambda
+        if (lambda == "mincverr") {
+          lambda <- "lambda.min"
+        }
+        else if (lambda == "se") {
+          lambda <- "lambda.1se"
+        }
+        else if (lambda == "lowest") {
+          lambda <- Model[[i]][[j]]$lambda[length(Model[[i]][[j]]$lambda)]
+        }
+        
+        # predictions
+        predict[[names(Model)[i]]][[names(Model[[i]])[j]]] <-
+          cbind(rownames(newVars),
+                predict(Model[[i]][[j]], newVars, s = lambda))
+        
+        j <- j + 1
+        
+      }
       
-      j <- j + 1
+      i <- i + 1
       
     }
     
-    i <- i + 1
+    if (ASEmode == 1) {
+      ASEpredict <- predict
+      
+      save(ASEpredict, file = "./ASEpredict.rda")
+      
+      cat("\n\nASE predictions made! Please,check your source folder")
+      
+    } else{
+      Epredict <- predict
+      
+      save(Epredict, file = "./Epredict.rda")
+      
+      cat("\n\nGenotype level expression predictions made! Please,check your source folder")
+      
+    }
     
   }
-  
-  save(predict, file = "./predict.rda")
-  
-  cat("\n\nPredictions made! Please,check your source folder")
-  
-}
 
 Plot.mcve.ASEnet <- function(ASEModel,
-                        EModel,
-                        aseDat,
-                        type = 1,
-                        thold = 0.001) {
+                             EModel,
+                             aseDat,
+                             type = 1,
+                             thold = 0.001) {
   # set margins for better visibility
   par(mar = c(6.2, 6, 2, 2) + 0.1, mgp = c(4.5, 1, 0))
   
@@ -387,7 +414,7 @@ Plot.mcve.ASEnet <- function(ASEModel,
     
   }
   
-  # retrie expresssion position from site name
+  # retrieve expresssion position from site name
   
   ASEmcve[["Locations"]] <-
     aseDat$ASE$end[which(ASEmcve$Sites %in% aseDat$ASE$ID)]
@@ -428,7 +455,7 @@ Plot.mcve.ASEnet <- function(ASEModel,
     
     cat("\n\nPlot created, please check the plot window in RStudio")
     
-  # mcve ranked with a threshold
+    # mcve ranked with a threshold
   } else if (type == 2) {
     errDif <- list()
     errDif <- EmcveP$mcve - ASEmcveP$mcve
@@ -450,7 +477,9 @@ Plot.mcve.ASEnet <- function(ASEModel,
         "Emodel mcve - ASEModel mcve (ranked, threshold of :",
         thold,
         ")"
-        , sep = ""),
+        ,
+        sep = ""
+      ),
       las = 2,
       cex.names = 1,
       xpd = FALSE,
@@ -461,7 +490,7 @@ Plot.mcve.ASEnet <- function(ASEModel,
     cat("\n\nPlot created, please check the plot window in RStudio")
     
     
-  # actual mcve values with a threshold
+    # actual mcve values with a threshold
   } else if (type == 3) {
     blue <- rgb(0, 0, 1, alpha = 0.5)
     red <- rgb(1, 0, 0, alpha = 0.5)
@@ -514,12 +543,11 @@ Plot.R2.ASEnet <- function(predict, exp) {
   
   # retrieve predictions of known expressions to calculate R2
   while (i <= length(exp)) {
-    
     j <- 1
     
     while (j <= length(exp[[i]])) {
       predict[[i]][[j]] <-
-        predict[[i]][[j]][which(predict[[i]][[j]][, 1] %in% exp[[i]][[j]][, 1])]
+        predict[[i]][[j]][which(predict[[i]][[j]][, 1] %in% exp[[i]][[j]][, 1]), ]
       
       j <- j + 1
       
@@ -530,17 +558,17 @@ Plot.R2.ASEnet <- function(predict, exp) {
   }
   
   # calaculate R squared
-  R2 <-  list()
+  R2 <-  matrix()
+  
+  i <- 1
   
   while (i <= length(exp)) {
-    
     j <- 1
     
     while (j <= length(exp[[i]])) {
+      R2[paste(names(exp)[i], names(exp[[i]])[j])] <-
+        summary(lm(predict[[i]][[j]][, 2] ~ exp[[i]][[j]][, 2]))$r.squared
       
-      R2[[names(exp)[i]]][[names(exp[[i]])[j]]] <-
-        cor(predict[[i]][[j]],exp[[i]][[j]]) ^ 2
-  
       j <- j + 1
       
     }
@@ -549,8 +577,8 @@ Plot.R2.ASEnet <- function(predict, exp) {
     
   }
   
-  # finish plotting
+  plot(R2)
   
-  cat("Plot created, please chack the plot window in RStudio")
+  cat("Plot created, please check the plot window in RStudio")
   
 }
