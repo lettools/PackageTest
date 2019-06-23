@@ -43,9 +43,14 @@
 #'           (function recognises them by name)
 #'
 #'           ASEmode - 1 for predicting of allele specific expression, 0 for genotype level modelling (like prediXcan)
+#'           
+#'           lambda - lambda reduction parameter to be used. mincverr selects lambda producing a minimum cross
+#'                    validated error during model creation, se selects largest value of lambda such that error is within 
+#'                    1 standard error of the minimum, lowest selects lowest value of lambda used in model creation
 #'
-#' Plot.ASEnet: Uses cross-validated models from train.ASEnet and plots mean cross validated error across the positions
-#'              of all trained mutations
+#'
+#'Plot.mcve.ASEnet: Uses cross-validated models from train.ASEnet and plots mean cross validated error across the positions
+#'                  of all trained mutations
 #'
 #'Arguments:
 #'
@@ -58,6 +63,19 @@
 #'
 #'           thold - for types 2 and 3, mcve threshold of shown expression locations (type 3 displays any expression locations
 #'                  for which any of the two models suprpasses the threshold)
+#'
+#'
+#'Plot.R2.ASEnet: Plots observed expression values against predicted values. Also calculates and plots the value of r squared
+#'                per expression site
+#'
+#'Arguments:
+#'
+#'           predict - predictions of gene expression values, outputted from the Predict.ASEnet function
+#'
+#'           exp - observed expression values as outputted in model creation with the Train.ASEnet function
+#'
+#'           type - type 1 plots an observed vs predicted scatter plot while type 2 shows the R2 value across gene expression
+#'                  sites
 #'
 #'
 #' Dependencies:
@@ -293,7 +311,7 @@ Train.ASEnet <-
 Predict.ASEnet <-
   function(Model,
            newHaps,
-           ASEmode = 1,
+           ASEmode,
            lambda = "mincverr") {
     # loop over models, looking for corresponding rSNPs to predict genotype level expression
     
@@ -538,16 +556,16 @@ Plot.mcve.ASEnet <- function(ASEModel,
   
 }
 
-Plot.R2.ASEnet <- function(predict, exp) {
+Plot.R2.ASEnet <- function(obs, pre, type = 1) {
   i <- 1
   
   # retrieve predictions of known expressions to calculate R2
-  while (i <= length(exp)) {
+  while (i <= length(obs)) {
     j <- 1
     
-    while (j <= length(exp[[i]])) {
-      predict[[i]][[j]] <-
-        predict[[i]][[j]][which(predict[[i]][[j]][, 1] %in% exp[[i]][[j]][, 1]), ]
+    while (j <= length(obs[[i]])) {
+      pre[[i]][[j]] <-
+        pre[[i]][[j]][which(pre[[i]][[j]][, 1] %in% obs[[i]][[j]][, 1]),]
       
       j <- j + 1
       
@@ -559,15 +577,23 @@ Plot.R2.ASEnet <- function(predict, exp) {
   
   # calaculate R squared
   R2 <-  matrix()
+  observed <- matrix()
+  predicted <- matrix()
   
   i <- 1
   
-  while (i <= length(exp)) {
+  while (i <= length(obs)) {
     j <- 1
     
-    while (j <= length(exp[[i]])) {
-      R2[paste(names(exp)[i], names(exp[[i]])[j])] <-
-        summary(lm(predict[[i]][[j]][, 2] ~ exp[[i]][[j]][, 2]))$r.squared
+    while (j <= length(obs[[i]])) {
+      R2[paste(names(obs)[i], names(obs[[i]])[j])] <-
+        summary(lm(pre[[i]][[j]][, 2] ~ obs[[i]][[j]][, 2]))$r.squared
+      
+      observed[paste(names(obs)[i], names(obs[[i]])[j])] <-
+        obs[[i]][[j]][, 2]
+      
+      predicted[paste(names(obs)[i], names(obs[[i]])[j])] <-
+        pre[[i]][[j]][, 2]
       
       j <- j + 1
       
@@ -577,7 +603,13 @@ Plot.R2.ASEnet <- function(predict, exp) {
     
   }
   
-  plot(R2)
+  if (type == 1) {
+    plot(observed, predicted)
+    
+  } else if (type == 2) {
+    plot(R2)
+    
+  }
   
   cat("Plot created, please check the plot window in RStudio")
   
