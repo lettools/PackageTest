@@ -11,7 +11,7 @@
 #'
 #' Arguments:
 #'
-#'           gen_input - Rdata file, output of the Gen.input function present in the lettols GitHub repository.
+#'           aseDat - Rdata file, output of the Gen.input function present in the lettols GitHub repository.
 #'
 #'           TSSwin - This represents the distance from each gene's TSS over which nearby variants will be selected,
 #'                    either side of the transcript start site. Defaults to 500kb
@@ -54,7 +54,7 @@
 #'
 #'Arguments:
 #'
-#'           EModel / ASEModel - Rdata files, output of the Train.Asenet function, containing the models built for
+#'           GenModel / ASEModel - Rdata files, output of the Train.Asenet function, containing the models built for
 #'                              genotype level and chromosome level prediction accordingly
 #'
 #'           type - type 1 displays difference in accuracy between models across common mutations, type 2 shows a ranking
@@ -70,12 +70,14 @@
 #'
 #'Arguments:
 #'
+#'           model - ASE or genotype level model file, containing expression observed at each modelled site
+#'           
 #'           predict - predictions of gene expression values, outputted from the Predict.ASEnet function
 #'
-#'           exp - observed expression values as outputted in model creation with the Train.ASEnet function
-#'
-#'           type - type 1 plots an observed vs predicted scatter plot while type 2 shows the R2 value across gene expression
-#'                  sites
+#'           type - type 1 plots the R2 value across gene expressionsites while type 2 shows an observed vs 
+#'                  predicted scatter plot
+#'                  
+#'           sitename - (for type 2 plot) name of the expression site for wich to see observed vs predicted plot
 #'
 #'
 #' Dependencies:
@@ -86,7 +88,7 @@
 
 
 Train.ASEnet <-
-  function(gen_input,
+  function(aseDat,
            ASEmode = 1,
            TSSwin = 5e+05,
            alpha = 0.5,
@@ -114,16 +116,16 @@ Train.ASEnet <-
     # filter out infromation needed from Gene.Input output
     
     rSNPs <-
-      data.frame(ID = gen_input$leg$ID,
-                 end = gen_input$leg$end,
-                 gen_input$haps)
+      data.frame(ID = aseDat$leg$ID,
+                 end = aseDat$leg$end,
+                 aseDat$haps)
     
     ASE <-
-      select(gen_input$ASE, ID, end, TSS, Gene, Ind, refCount, altCount)
+      select(aseDat$ASE, ID, end, TSS, Gene, Ind, refCount, altCount)
     
     ASE <- ASE[order(ASE$TSS), ]
     
-    totReads <- gen_input$counts
+    totReads <- aseDat$counts
     
     totReads <- totReads[order(totReads$Ind), ]
     
@@ -268,7 +270,8 @@ Train.ASEnet <-
               cbind(currASE$Ind, currASET)
           }
           
-            currASE$end[1]
+            
+          ASEModel[[currGene]][[unique(snpASE$ID)[j]]][["location"]] <- currASE$end[1]
           
         }
         
@@ -587,7 +590,7 @@ Plot.mcve.ASEnet <- function(GenModel,
   
 }
 
-Plot.R2.ASEnet <- function(Model, predict, type = 1) {
+Plot.R2.ASEnet <- function(Model, predict, type = 1, sitename = "rs2845405") {
   i <- 1
   
   # retrieve predictions of known expressions to calculate R2
@@ -608,10 +611,10 @@ Plot.R2.ASEnet <- function(Model, predict, type = 1) {
   }
   
   # calaculate R squared
-  
-  R2 <-  matrix()
-  observed <- matrix()
-  predicted <- matrix()
+
+  R2 <-  list()
+  observed <- list()
+  predicted <- list()
   
   i <- 1
   
@@ -619,21 +622,27 @@ Plot.R2.ASEnet <- function(Model, predict, type = 1) {
     j <- 1
     
     while (j <= length(Model[[i]])) {
+      R2[["sites"]][[length(R2[["sites"]]) + 1]] <-
+        names(Model[[i]])[j]
       
-      R2[paste(names(Model)[i], names(Model[[i]])[j])][["sites"]] <-
-        Model[[i]][[j]]$sites
+      R2[["locations"]][[length(R2[["locations"]]) + 1]] <-
+        Model[[i]][[j]]$location
       
-      R2[paste(names(Model)[i], names(Model[[i]])[j])][["locations"]] <-
-        Model[[i]][[j]]$locations
+      R2[["people"]][[length(R2[["people"]]) + 1]] <-
+        Model[[i]][[j]]$model$glmnet.fit$nobs
       
-      R2[paste(names(Model)[i], names(Model[[i]])[j])][["values"]] <-
-        summary(lm(predict[[i]][[j]][, 2] ~ Model[[i]][[j]][["expression"]][, 2]))$r.squared
+      R2[["values"]][[length(R2[["values"]]) + 1]] <-
+        summary(lm(as.numeric(predict[[i]][[j]][, 2]) ~ as.numeric(Model[[i]][[j]][["expression"]][, 2])))$r.squared
       
-      observed[paste(names(Model)[i], names(Model[[i]])[j])] <-
-        Model[[i]][[j]][, 2]
+      # retrieve observed abd predicted values
       
-      predicted[paste(names(Model)[i], names(Model[[i]])[j])] <-
-        predict[[i]][[j]][, 2]
+      observed[names(Model[[i]])[j]] <-
+        list(as.numeric(Model[[i]][[j]][["expression"]][, 2]))
+      
+      predicted[names(Model[[i]])[j]] <-
+        list(as.numeric(predict[[i]][[j]][, 2]))
+      
+      
       
       j <- j + 1
       
@@ -644,10 +653,40 @@ Plot.R2.ASEnet <- function(Model, predict, type = 1) {
   }
   
   if (type == 1) {
-    plot(observed, predicted)
+    
+    par()
+    dev.off()
+    
+    # set bins and colour pallete for gradient depending on number of individuals
+    
+    bins <- cut(R2[["people"]],10,include.lowest=TRUE)
+    colfunc <- colorRampPalette(c("grey", "black"))
+    pallete <- colfunc(10)
+  
+    plotcols <- pallete[bins]
+    
+    par(mar=c(5.1, 4.1, 4.1, 10), xpd=TRUE)
+    
+    plot(R2[["locations"]],R2[["values"]], xlab = "expression locations", ylab = "R2", col = plotcols, pch = 16, bty = "n")
+    
+    legend(
+      "topright",
+      inset=c(-0.36,0),
+      legend = levels(bins),
+      pch = 16,
+      col = pallete,
+      bty = "n",
+      cex = 1
+    )
+    
     
   } else if (type == 2) {
-    plot(R2)
+    
+    par()
+    dev.off()
+    
+    plot(array(as.numeric(unlist(observed[sitename]))), array(as.numeric(unlist(predicted[sitename]))), xlab = "observed", 
+         ylab = "predicted", main = sitename)
     
   }
   
