@@ -44,7 +44,7 @@
 #'
 #'           ASEmode - 1 for predicting of allele specific expression, 0 for genotype level modelling (like prediXcan)
 #'                     (just to save file with matching name)
-#'           
+#'
 #'           halve - is the ASE model halved (just to save file with matching name), only needed if ASEMode = 1
 #'
 #'           lambda - lambda reduction parameter to be used. mincverr selects lambda producing a minimum cross
@@ -74,19 +74,21 @@
 #'Arguments:
 #'
 #'           model - ASE or genotype level model file, containing expression observed at each modelled site
-#'           
+#'
 #'           predict - predictions of gene expression values, outputted from the Predict.ASEnet function
 #'
-#'           type - type 1 plots the R2 value across gene expressionsites while type 2 shows an observed vs 
+#'           type - type 1 plots the R2 value across gene expressionsites while type 2 shows an observed vs
 #'                  predicted scatter plot
-#'                  
+#'
 #'           sitename - (for type 2 plot) name of the expression site for wich to see observed vs predicted plot
 #'
 #'
 #' Dependencies:
-#'
-#'             library(dplyr)
+#'              
+#'             library(tidyverse)
+#'             library(reshape2)
 #'             library(glmnet)
+#'             
 #'
 
 
@@ -126,11 +128,11 @@ Train.ASEnet <-
     ASE <-
       select(aseDat$ASE, ID, end, TSS, Gene, Ind, refCount, altCount)
     
-    ASE <- ASE[order(ASE$TSS), ]
+    ASE <- ASE[order(ASE$TSS),]
     
     totReads <- aseDat$counts
     
-    totReads <- totReads[order(totReads$Ind), ]
+    totReads <- totReads[order(totReads$Ind),]
     
     #' iterate through every unique gene available, taking TSSwin to look for nearby rSNPs, then train
     #' each ASE
@@ -156,7 +158,7 @@ Train.ASEnet <-
       tempRange <- seq(currTSS - TSSwin, currTSS + TSSwin)
       
       snpASE <-
-        ASE[which(ASE$Gene == currGene), ] # ASE data on that gene
+        ASE[which(ASE$Gene == currGene),] # ASE data on that gene
       
       # nearby variants of the reference alleles on that gene
       
@@ -177,9 +179,9 @@ Train.ASEnet <-
         #iterate through all ASE sites of a gene
         
         currASE <-
-          snpASE[which(snpASE$ID == unique(snpASE$ID)[j]), ] # ASE data on current ASE site
+          snpASE[which(snpASE$ID == unique(snpASE$ID)[j]),] # ASE data on current ASE site
         
-        currTot <- totReads[which(totReads$Ind %in% currASE$Ind), ]
+        currTot <- totReads[which(totReads$Ind %in% currASE$Ind),]
         
         
         # put total count data in correct format to normalise in next step
@@ -192,7 +194,7 @@ Train.ASEnet <-
           
         }
         
-        currTot <- currTot[which(currTot$All != 1), ]
+        currTot <- currTot[which(currTot$All != 1),]
         
         colnames(currTot) <- c("Ind", "refCount", "altCount")
         
@@ -273,8 +275,9 @@ Train.ASEnet <-
               cbind(currASE$Ind, currASET)
           }
           
-            
-          ASEModel[[currGene]][[unique(snpASE$ID)[j]]][["location"]] <- currASE$end[1]
+          
+          ASEModel[[currGene]][[unique(snpASE$ID)[j]]][["location"]] <-
+            currASE$end[1]
           
         }
         
@@ -350,7 +353,7 @@ Predict.ASEnet <-
               names(Model[[i]])[j])
           
           newVars <-
-            t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["model"]][["glmnet.fit"]][["beta"]]@Dimnames[[1]]), ])
+            t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["model"]][["glmnet.fit"]][["beta"]]@Dimnames[[1]]),])
           
           # selection of lambda
           
@@ -380,9 +383,7 @@ Predict.ASEnet <-
       }
       
       if (ASEmode == 1) {
-        
         if (halve == 0) {
-          
           ASEpredict <- predict
           
           save(ASEpredict, file = "./ASEpredict.rda")
@@ -390,7 +391,6 @@ Predict.ASEnet <-
           cat("\n\nASE predictions made! Please,check your source folder")
           
         } else{
-          
           ASEpredict_Halved <- predict
           
           save(ASEpredict_Halved, file = "./ASEpredict.rda")
@@ -418,9 +418,6 @@ Plot.mcve.ASEnet <- function(GenModel,
                              ASEModel,
                              type = 1,
                              thold = 0.001) {
-  # set margins for better visibility
-  
-  par(mar = c(6.2, 6, 2, 2) + 0.1, mgp = c(4.5, 1, 0))
   
   # retrieve genotype level expression mean cross validated error values
   
@@ -437,6 +434,9 @@ Plot.mcve.ASEnet <- function(GenModel,
       
       Genmcve[["locations"]][[length(Genmcve[["sites"]]) + 1]] <-
         GenModel[[i]][[j]][["location"]]
+      
+      Genmcve[["people"]][[length(Genmcve[["sites"]]) + 1]] <-
+        GenModel[[i]][[j]][["model"]]$glmnet.fit$nobs
       
       Genmcve[["mcve"]][[length(Genmcve[["mcve"]]) + 1]] <-
         GenModel[[i]][[j]][["model"]]$cvm[which(GenModel[[i]][[j]][["model"]]$lambda == GenModel[[i]][[j]][["model"]]$lambda.min)]
@@ -465,6 +465,9 @@ Plot.mcve.ASEnet <- function(GenModel,
       ASEmcve[["locations"]][[length(ASEmcve[["sites"]]) + 1]] <-
         ASEModel[[i]][[j]][["location"]]
       
+      ASEmcve[["people"]][[length(ASEmcve[["sites"]]) + 1]] <-
+        ASEModel[[i]][[j]][["model"]]$glmnet.fit$nobs
+      
       ASEmcve[["mcve"]][[length(ASEmcve[["mcve"]]) + 1]] <-
         ASEModel[[i]][[j]][["model"]]$cvm[which(ASEModel[[i]][[j]][["model"]]$lambda == ASEModel[[i]][[j]][["model"]]$lambda.min)]
       
@@ -483,6 +486,8 @@ Plot.mcve.ASEnet <- function(GenModel,
     Genmcve$sites[which(Genmcve$sites %in% ASEmcve$sites)]
   GenmcveC[["locations"]] <-
     Genmcve$locations[which(Genmcve$sites %in% ASEmcve$sites)]
+  GenmcveC[["people"]] <-
+    Genmcve$people[which(Genmcve$sites %in% ASEmcve$sites)]
   GenmcveC[["mcve"]] <-
     Genmcve$mcve[which(Genmcve$sites %in% ASEmcve$sites)]
   
@@ -491,29 +496,37 @@ Plot.mcve.ASEnet <- function(GenModel,
     ASEmcve$sites[which(ASEmcve$sites %in% Genmcve$sites)]
   ASEmcveC[["locations"]] <-
     ASEmcve$locations[which(ASEmcve$sites %in% Genmcve$sites)]
+  ASEmcveC[["people"]] <-
+    ASEmcve$people[which(ASEmcve$sites %in% Genmcve$sites)]
   ASEmcveC[["mcve"]] <-
     ASEmcve$mcve[which(ASEmcve$sites %in% Genmcve$sites)]
-  
-  
-  
+
   # actual plotting
   
   # mcve difference
   
   if (type == 1) {
-    plot(
-      ASEmcveC$locations,
-      GenmcveC$mcve - ASEmcveC$mcve,
-      type = "p",
-      xlab = "Chromosome location",
-      ylab = "GenModel mcve - ASEModel mcve"
+    
+    data = data.frame(
+      locations = ASEmcveC$locations,
+      Gen_ASE_Model_MCVE_differences = GenmcveC$mcve - ASEmcveC$mcve,
+      peopleGen = GenmcveC$people,
+      peopleASE = ASEmcveC$people
     )
     
-    cat("\n\nPlot created, please check the plot window in RStudio")
+    p <- ggplot(
+      data = data
+    ) +
+      geom_jitter(aes(locations, Gen_ASE_Model_MCVE_differences))
+    
+    print(p)
+    
+    cat("\nPlot created, please check the plot window in RStudio\n ")
     
     # mcve ranked with a threshold
     
   } else if (type == 2) {
+    
     errDif <- list()
     errDif <- GenmcveC$mcve - ASEmcveC$mcve
     
@@ -528,38 +541,23 @@ Plot.mcve.ASEnet <- function(GenModel,
     errDif$locations <- errDif$locations[order(-errDif$difs)]
     errDif$difs <- errDif$difs[order(-errDif$difs)]
     
+    errDif$sites <- factor(errDif$sites, levels = errDif$sites)
+    
     errDif$sites <- errDif$sites[which(abs(errDif$difs) > thold)]
     errDif$locations <-
       errDif$locations[which(abs(errDif$difs) > thold)]
     errDif$difs <- errDif$difs[which(abs(errDif$difs) > thold)]
     
+    p <- ggplot(data = data.frame(errDif), aes(sites, difs)) + geom_col()
     
-    barplot(
-      errDif$difs,
-      names.arg = paste(errDif$sites, errDif$locations, sep = "\n"),
-      main = "Common expression sites",
-      ylab = paste(
-        "GenModel mcve - ASEModel mcve (ranked, threshold of :",
-        thold,
-        ")"
-        ,
-        sep = ""
-      ),
-      las = 2,
-      cex.names = 1,
-      xpd = FALSE,
-      beside = TRUE,
-      ylim = range(pretty(c(0, errDif$difs)))
-    )
+    print(p)
     
-    cat("\n\nPlot created, please check the plot window in RStudio")
+    cat("\nPlot created, please check the plot window in RStudio\n ")
     
     
     # actual mcve values with a threshold
     
   } else if (type == 3) {
-    blue <- rgb(0, 0, 1, alpha = 0.5)
-    red <- rgb(1, 0, 0, alpha = 0.5)
     
     commThold <-
       unique(c(which(abs(ASEmcveC$mcve) > thold), which(abs(GenmcveC$mcve) > thold)))
@@ -569,45 +567,45 @@ Plot.mcve.ASEnet <- function(GenModel,
     ASEmcveC$locations <- ASEmcveC$locations[commThold]
     ASEmcveC$mcve <- ASEmcveC$mcve[commThold]
     
+    ASEmcveC$sites <- factor(ASEmcveC$sites, levels = ASEmcveC$sites)
+    
     GenmcveC$sites <- GenmcveC$sites[commThold]
     GenmcveC$locations <- GenmcveC$locations[commThold]
     GenmcveC$mcve <- GenmcveC$mcve[commThold]
     
     maxmcve <- max(max(ASEmcveC$mcve), max(GenmcveC$mcve))
     
-    barplot(
-      GenmcveC$mcve,
-      names.arg =  paste(ASEmcveC$sites, ASEmcveC$locations, sep = "\n"),
-      main = "Common expression sites",
-      ylab = paste("mcve (threshold of :", thold, ")", sep = ""),
-      las = 2,
-      cex.names = 0.75,
-      col = red,
-      ylim = range(pretty(c(0, maxmcve)))
-    )
-    legend(
-      "topleft",
-      legend = c("Genotype-level", "Chromosome-level"),
-      fill = c(red, blue),
-      bty = "n",
-      cex = 0.75
+    data = data.frame(
+      sites = ASEmcveC$sites,
+      locations = ASEmcveC$locations,
+      GenMCVE = GenmcveC$mcve,
+      ASEMCVE = ASEmcveC$mcve
     )
     
-    par(new = TRUE)
-    barplot(
-      ASEmcveC$mcve,
-      col = blue,
-      axes = FALSE,
-      ylim = range(pretty(c(0, maxmcve)))
-    )
+    data <-
+      melt(data[, c('sites' , 'GenMCVE', "ASEMCVE")], id.vars = 1)
     
-    cat("\n\nPlot created, please check the plot window in RStudio")
+    colnames(data)[2] <- "Models"
+    colnames(data)[3] <- "MCVE"
+    
+    p <- ggplot(data
+                , aes(sites, MCVE)) +
+      geom_bar(aes(fill = Models), stat = "identity", position = "dodge") +
+      theme(axis.text.x = element_text(angle = 90)) + 
+      labs(x = paste("Common sites with a MCVE lower threshold of ",thold, sep = ""))
+    
+    print(p)
+
+    cat("\nPlot created, please check the plot window in RStudio\n ")
     
   }
   
 }
 
-Plot.R2.ASEnet <- function(Model, predict, type = 1) {
+Plot.R2.ASEnet <- function(Model,
+                           predict,
+                           type = 1,
+                           test = "R2") {
   i <- 1
   
   # retrieve predictions of known expressions to calculate R2
@@ -628,7 +626,7 @@ Plot.R2.ASEnet <- function(Model, predict, type = 1) {
   }
   
   # calaculate R squared
-
+  
   R2 <-  list()
   observed <- list()
   predicted <- list()
@@ -637,6 +635,8 @@ Plot.R2.ASEnet <- function(Model, predict, type = 1) {
   
   while (i <= length(Model)) {
     j <- 1
+    
+    # R2 / spearman correlation
     
     while (j <= length(Model[[i]])) {
       R2[["sites"]][[length(R2[["sites"]]) + 1]] <-
@@ -648,8 +648,12 @@ Plot.R2.ASEnet <- function(Model, predict, type = 1) {
       R2[["people"]][[length(R2[["people"]]) + 1]] <-
         Model[[i]][[j]]$model$glmnet.fit$nobs
       
-      R2[["values"]][[length(R2[["values"]]) + 1]] <-
+      R2[["valuesR2"]][[length(R2[["valuesR2"]]) + 1]] <-
         summary(lm(as.numeric(predict[[i]][[j]][, 2]) ~ as.numeric(Model[[i]][[j]][["expression"]][, 2])))$r.squared
+      
+      R2[["valuesSPM"]][[length(R2[["valuesSPM"]]) + 1]] <-
+        cor(as.numeric(predict[[i]][[j]][, 2]), as.numeric(Model[[i]][[j]][["expression"]][, 2]), method = "spearman")
+      
       
       # retrieve observed abd predicted values
       
@@ -670,25 +674,32 @@ Plot.R2.ASEnet <- function(Model, predict, type = 1) {
   }
   
   if (type == 1) {
-    
     par()
     dev.off()
     
     # set bins and colour pallete for gradient depending on number of individuals
     
-    bins <- cut(R2[["people"]],10,include.lowest=TRUE)
+    bins <- cut(R2[["people"]], 10, include.lowest = TRUE)
     colfunc <- colorRampPalette(c("grey", "black"))
     pallete <- colfunc(10)
-  
+    
     plotcols <- pallete[bins]
     
-    par(mar=c(5.1, 4.1, 4.1, 7), xpd=TRUE)
+    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
     
-    plot(R2[["locations"]],R2[["values"]], xlab = "expression locations", ylab = "R2", col = plotcols, pch = 16, bty = "n")
+    plot(
+      R2[["locations"]],
+      R2[[paste("values", test, sep = "")]],
+      xlab = "expression locations",
+      ylab = test,
+      col = plotcols,
+      pch = 16,
+      bty = "n"
+    )
     
     legend(
       "topright",
-      inset=c(-0.42,0),
+      inset = c(-0.42, 0),
       legend = levels(bins),
       pch = 16,
       col = pallete,
@@ -698,11 +709,12 @@ Plot.R2.ASEnet <- function(Model, predict, type = 1) {
     
     
   } else if (type == 2) {
-    
     par()
     dev.off()
     
-    plot(array(as.numeric(unlist(observed))), array(as.numeric(unlist(predicted))), xlab = "observed", 
+    plot(array(as.numeric(unlist(observed))),
+         array(as.numeric(unlist(predicted))),
+         xlab = "observed",
          ylab = "predicted")
     
   }
