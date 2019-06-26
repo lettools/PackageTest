@@ -43,6 +43,9 @@
 #'           (function recognises them by name)
 #'
 #'           ASEmode - 1 for predicting of allele specific expression, 0 for genotype level modelling (like prediXcan)
+#'                     (just to save file with matching name)
+#'           
+#'           halve - is the ASE model halved (just to save file with matching name), only needed if ASEMode = 1
 #'
 #'           lambda - lambda reduction parameter to be used. mincverr selects lambda producing a minimum cross
 #'                    validated error during model creation, se selects largest value of lambda such that error is within
@@ -323,6 +326,7 @@ Predict.ASEnet <-
   function(Model,
            newHaps,
            ASEmode,
+           halve,
            lambda = "mincverr") {
     # loop over models, looking for corresponding rSNPs to predict genotype level expression
     
@@ -376,11 +380,24 @@ Predict.ASEnet <-
       }
       
       if (ASEmode == 1) {
-        ASEpredict <- predict
         
-        save(ASEpredict, file = "./ASEpredict.rda")
-        
-        cat("\n\nASE predictions made! Please,check your source folder")
+        if (halve == 0) {
+          
+          ASEpredict <- predict
+          
+          save(ASEpredict, file = "./ASEpredict.rda")
+          
+          cat("\n\nASE predictions made! Please,check your source folder")
+          
+        } else{
+          
+          ASEpredict_Halved <- predict
+          
+          save(ASEpredict_Halved, file = "./ASEpredict.rda")
+          
+          cat("\n\nASE predictions made! Please,check your source folder")
+          
+        }
         
       } else{
         Genpredict <- predict
@@ -590,7 +607,7 @@ Plot.mcve.ASEnet <- function(GenModel,
   
 }
 
-Plot.R2.ASEnet <- function(Model, predict, type = 1, sitename = "rs2845405") {
+Plot.R2.ASEnet <- function(Model, predict, type = 1) {
   i <- 1
   
   # retrieve predictions of known expressions to calculate R2
@@ -665,13 +682,13 @@ Plot.R2.ASEnet <- function(Model, predict, type = 1, sitename = "rs2845405") {
   
     plotcols <- pallete[bins]
     
-    par(mar=c(5.1, 4.1, 4.1, 10), xpd=TRUE)
+    par(mar=c(5.1, 4.1, 4.1, 7), xpd=TRUE)
     
     plot(R2[["locations"]],R2[["values"]], xlab = "expression locations", ylab = "R2", col = plotcols, pch = 16, bty = "n")
     
     legend(
       "topright",
-      inset=c(-0.36,0),
+      inset=c(-0.42,0),
       legend = levels(bins),
       pch = 16,
       col = pallete,
@@ -685,8 +702,8 @@ Plot.R2.ASEnet <- function(Model, predict, type = 1, sitename = "rs2845405") {
     par()
     dev.off()
     
-    plot(array(as.numeric(unlist(observed[sitename]))), array(as.numeric(unlist(predicted[sitename]))), xlab = "observed", 
-         ylab = "predicted", main = sitename)
+    plot(array(as.numeric(unlist(observed))), array(as.numeric(unlist(predicted))), xlab = "observed", 
+         ylab = "predicted")
     
   }
   
