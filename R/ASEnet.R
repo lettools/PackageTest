@@ -77,18 +77,22 @@
 #'
 #'           predict - predictions of gene expression values, outputted from the Predict.ASEnet function
 #'
-#'           type - type 1 plots the R2 value across gene expressionsites while type 2 shows an observed vs
-#'                  predicted scatter plot
+#'           test - "R2" for r squared testing and "SPM" for spearman testing
 #'
-#'           sitename - (for type 2 plot) name of the expression site for wich to see observed vs predicted plot
+#'           type - type 1 plots the R2 value across gene expressionsites, type 2 shows an observed vs
+#'                  predicted scatter plot, type 3 plots R2 / SPM values of a model against another model
+#'                  (secmodel and secpredict needed)
+#'
+#'           sModel/spredict - model and predict files for secondary model for tyoe 3 plotting
+#'
 #'
 #'
 #' Dependencies:
-#'              
+#'
 #'             library(tidyverse)
 #'             library(reshape2)
 #'             library(glmnet)
-#'             
+#'
 #'
 
 
@@ -128,11 +132,11 @@ Train.ASEnet <-
     ASE <-
       select(aseDat$ASE, ID, end, TSS, Gene, Ind, refCount, altCount)
     
-    ASE <- ASE[order(ASE$TSS),]
+    ASE <- ASE[order(ASE$TSS), ]
     
     totReads <- aseDat$counts
     
-    totReads <- totReads[order(totReads$Ind),]
+    totReads <- totReads[order(totReads$Ind), ]
     
     #' iterate through every unique gene available, taking TSSwin to look for nearby rSNPs, then train
     #' each ASE
@@ -158,7 +162,7 @@ Train.ASEnet <-
       tempRange <- seq(currTSS - TSSwin, currTSS + TSSwin)
       
       snpASE <-
-        ASE[which(ASE$Gene == currGene),] # ASE data on that gene
+        ASE[which(ASE$Gene == currGene), ] # ASE data on that gene
       
       # nearby variants of the reference alleles on that gene
       
@@ -179,9 +183,9 @@ Train.ASEnet <-
         #iterate through all ASE sites of a gene
         
         currASE <-
-          snpASE[which(snpASE$ID == unique(snpASE$ID)[j]),] # ASE data on current ASE site
+          snpASE[which(snpASE$ID == unique(snpASE$ID)[j]), ] # ASE data on current ASE site
         
-        currTot <- totReads[which(totReads$Ind %in% currASE$Ind),]
+        currTot <- totReads[which(totReads$Ind %in% currASE$Ind), ]
         
         
         # put total count data in correct format to normalise in next step
@@ -194,7 +198,7 @@ Train.ASEnet <-
           
         }
         
-        currTot <- currTot[which(currTot$All != 1),]
+        currTot <- currTot[which(currTot$All != 1), ]
         
         colnames(currTot) <- c("Ind", "refCount", "altCount")
         
@@ -353,7 +357,7 @@ Predict.ASEnet <-
               names(Model[[i]])[j])
           
           newVars <-
-            t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["model"]][["glmnet.fit"]][["beta"]]@Dimnames[[1]]),])
+            t(newHaps[which(rownames(newHaps) %in% Model[[i]][[j]][["model"]][["glmnet.fit"]][["beta"]]@Dimnames[[1]]), ])
           
           # selection of lambda
           
@@ -418,7 +422,6 @@ Plot.mcve.ASEnet <- function(GenModel,
                              ASEModel,
                              type = 1,
                              thold = 0.001) {
-  
   # retrieve genotype level expression mean cross validated error values
   
   Genmcve <- list()
@@ -500,13 +503,12 @@ Plot.mcve.ASEnet <- function(GenModel,
     ASEmcve$people[which(ASEmcve$sites %in% Genmcve$sites)]
   ASEmcveC[["mcve"]] <-
     ASEmcve$mcve[which(ASEmcve$sites %in% Genmcve$sites)]
-
+  
   # actual plotting
   
   # mcve difference
   
   if (type == 1) {
-    
     data = data.frame(
       locations = ASEmcveC$locations,
       Gen_ASE_Model_MCVE_differences = GenmcveC$mcve - ASEmcveC$mcve,
@@ -514,9 +516,7 @@ Plot.mcve.ASEnet <- function(GenModel,
       peopleASE = ASEmcveC$people
     )
     
-    p <- ggplot(
-      data = data
-    ) +
+    p <- ggplot(data = data) +
       geom_jitter(aes(locations, Gen_ASE_Model_MCVE_differences))
     
     print(p)
@@ -526,7 +526,6 @@ Plot.mcve.ASEnet <- function(GenModel,
     # mcve ranked with a threshold
     
   } else if (type == 2) {
-    
     errDif <- list()
     errDif <- GenmcveC$mcve - ASEmcveC$mcve
     
@@ -548,7 +547,8 @@ Plot.mcve.ASEnet <- function(GenModel,
       errDif$locations[which(abs(errDif$difs) > thold)]
     errDif$difs <- errDif$difs[which(abs(errDif$difs) > thold)]
     
-    p <- ggplot(data = data.frame(errDif), aes(sites, difs)) + geom_col()
+    p <-
+      ggplot(data = data.frame(errDif), aes(sites, difs)) + geom_col()
     
     print(p)
     
@@ -558,7 +558,6 @@ Plot.mcve.ASEnet <- function(GenModel,
     # actual mcve values with a threshold
     
   } else if (type == 3) {
-    
     commThold <-
       unique(c(which(abs(ASEmcveC$mcve) > thold), which(abs(GenmcveC$mcve) > thold)))
     commThold <- commThold[order(commThold)]
@@ -567,7 +566,8 @@ Plot.mcve.ASEnet <- function(GenModel,
     ASEmcveC$locations <- ASEmcveC$locations[commThold]
     ASEmcveC$mcve <- ASEmcveC$mcve[commThold]
     
-    ASEmcveC$sites <- factor(ASEmcveC$sites, levels = ASEmcveC$sites)
+    ASEmcveC$sites <-
+      factor(ASEmcveC$sites, levels = ASEmcveC$sites)
     
     GenmcveC$sites <- GenmcveC$sites[commThold]
     GenmcveC$locations <- GenmcveC$locations[commThold]
@@ -591,11 +591,11 @@ Plot.mcve.ASEnet <- function(GenModel,
     p <- ggplot(data
                 , aes(sites, MCVE)) +
       geom_bar(aes(fill = Models), stat = "identity", position = "dodge") +
-      theme(axis.text.x = element_text(angle = 90)) + 
-      labs(x = paste("Common sites with a MCVE lower threshold of ",thold, sep = ""))
+      theme(axis.text.x = element_text(angle = 90)) +
+      labs(x = paste("Common sites with a MCVE lower threshold of ", thold, sep = ""))
     
     print(p)
-
+    
     cat("\nPlot created, please check the plot window in RStudio\n ")
     
   }
@@ -605,7 +605,9 @@ Plot.mcve.ASEnet <- function(GenModel,
 Plot.R2.ASEnet <- function(Model,
                            predict,
                            type = 1,
-                           test = "R2") {
+                           test = "R2",
+                           sModel,
+                           spredict) {
   i <- 1
   
   # retrieve predictions of known expressions to calculate R2
@@ -615,7 +617,7 @@ Plot.R2.ASEnet <- function(Model,
     
     while (j <= length(Model[[i]])) {
       predict[[i]][[j]] <-
-        predict[[i]][[j]][which(predict[[i]][[j]][, 1] %in% Model[[i]][[j]][["expression"]][, 1]),]
+        predict[[i]][[j]][which(predict[[i]][[j]][, 1] %in% Model[[i]][[j]][["expression"]][, 1]), ]
       
       j <- j + 1
       
@@ -628,8 +630,9 @@ Plot.R2.ASEnet <- function(Model,
   # calaculate R squared
   
   R2 <-  list()
-  observed <- list()
   predicted <- list()
+  observed <- list()
+  
   
   i <- 1
   
@@ -657,11 +660,13 @@ Plot.R2.ASEnet <- function(Model,
       
       # retrieve observed abd predicted values
       
+      predicted[names(Model[[i]])[j]] <-
+        list(as.numeric(predict[[i]][[j]][, 2]))
+      
       observed[names(Model[[i]])[j]] <-
         list(as.numeric(Model[[i]][[j]][["expression"]][, 2]))
       
-      predicted[names(Model[[i]])[j]] <-
-        list(as.numeric(predict[[i]][[j]][, 2]))
+      
       
       
       
@@ -674,48 +679,111 @@ Plot.R2.ASEnet <- function(Model,
   }
   
   if (type == 1) {
-    par()
-    dev.off()
-    
     # set bins and colour pallete for gradient depending on number of individuals
     
     bins <- cut(R2[["people"]], 10, include.lowest = TRUE)
-    colfunc <- colorRampPalette(c("grey", "black"))
-    pallete <- colfunc(10)
     
-    plotcols <- pallete[bins]
+    data <-
+      data.frame(locations = R2[["locations"]],
+                 values = R2[[paste("values", test, sep = "")]],
+                 Data_Points = bins)
     
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
+    p <- ggplot(data, aes(locations, values, color = Data_Points)) +
+      geom_point() + scale_color_grey(start = 0.8, end = 0.2) + theme_classic()
     
-    plot(
-      R2[["locations"]],
-      R2[[paste("values", test, sep = "")]],
-      xlab = "expression locations",
-      ylab = test,
-      col = plotcols,
-      pch = 16,
-      bty = "n"
-    )
-    
-    legend(
-      "topright",
-      inset = c(-0.42, 0),
-      legend = levels(bins),
-      pch = 16,
-      col = pallete,
-      bty = "n",
-      cex = 1
-    )
-    
+    print(p)
     
   } else if (type == 2) {
-    par()
-    dev.off()
+    data <-
+      data.frame(predicted = array(as.numeric(unlist(predicted))),
+                 observed = array(as.numeric(unlist(observed))))
     
-    plot(array(as.numeric(unlist(observed))),
-         array(as.numeric(unlist(predicted))),
-         xlab = "observed",
-         ylab = "predicted")
+    p <- ggplot(data, aes(predicted, observed)) +
+      geom_point()
+    
+    print(p)
+    
+    
+  } else if (type == 3) {
+    i <- 1
+    
+    while (i <= length(sModel)) {
+      j <- 1
+      
+      while (j <= length(sModel[[i]])) {
+        spredict[[i]][[j]] <-
+          spredict[[i]][[j]][which(spredict[[i]][[j]][, 1] %in% sModel[[i]][[j]][["expression"]][, 1]), ]
+        
+        j <- j + 1
+        
+      }
+      
+      i <- i + 1
+      
+    }
+    
+    sR2 <-  list()
+    
+    i <- 1
+    
+    while (i <= length(sModel)) {
+      j <- 1
+      
+      # R2 / spearman correlation
+      
+      while (j <= length(sModel[[i]])) {
+        sR2[["sites"]][[length(sR2[["sites"]]) + 1]] <-
+          names(sModel[[i]])[j]
+        
+        sR2[["locations"]][[length(sR2[["locations"]]) + 1]] <-
+          sModel[[i]][[j]]$location
+        
+        sR2[["people"]][[length(sR2[["people"]]) + 1]] <-
+          sModel[[i]][[j]]$model$glmnet.fit$nobs
+        
+        sR2[["valuesR2"]][[length(sR2[["valuesR2"]]) + 1]] <-
+          summary(lm(as.numeric(spredict[[i]][[j]][, 2]) ~ as.numeric(sModel[[i]][[j]][["expression"]][, 2])))$r.squared
+        
+        sR2[["valuesSPM"]][[length(sR2[["valuesSPM"]]) + 1]] <-
+          cor(as.numeric(spredict[[i]][[j]][, 2]),
+              as.numeric(sModel[[i]][[j]][["expression"]][, 2]),
+              method = "spearman")
+        
+        
+        j <- j + 1
+        
+      }
+      
+      i <- i + 1
+      
+    }
+    
+    # get common points
+    
+    R2c <- list()
+    sR2c <- list()
+    
+    R2c$valuesR2 <- R2$valuesR2[which(R2$sites %in% sR2$sites)]
+    R2c$valuesSPM <- R2$valuesSPM[which(R2$sites %in% sR2$sites)]
+    R2c$people <- R2$people[which(R2$sites %in% sR2$sites)]
+    
+    sR2c$valuesR2 <- sR2$valuesR2[which(sR2$sites %in% R2$sites)]
+    sR2c$valuesSPM <- sR2$valuesSPM[which(sR2$sites %in% R2$sites)]
+    
+    bins <- cut(R2c[["people"]], 10, include.lowest = TRUE)
+    
+    data <-
+      data.frame(
+        Model_values = R2c[[paste("values", test, sep = "")]],
+        sModel_values = sR2c[[paste("values", test, sep = "")]],
+        Data_Points_Model = bins
+      )
+    
+    p <- ggplot(data, aes(sModel_values, Model_values, color = Data_Points_Model)) +
+      geom_point() + scale_color_grey(start = 0.8, end = 0.2) + theme_classic()
+    
+    print(p)
+    
     
   }
   
