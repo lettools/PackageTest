@@ -80,19 +80,19 @@
 #'           test - "R2" for r squared testing and "SPM" for spearman testing
 #'
 #'           type - type 1 plots the R2 value across gene expressionsites, type 2 shows an observed vs
-#'                  predicted scatter plot (if site selected of a site, otherwise of all sites), type 3 
+#'                  predicted scatter plot (if site selected of a site, otherwise of all sites), type 3
 #'                  plots R2 / SPM values of a model against a secondary model (sModel and spredict needed)
 #'
 #'           sModel/spredict - model and predict files for secondary model for tyoe 3 plotting
-#'           
+#'
 #'           BEST POINTS SELECTION (in terms of performance of primary vs secondary model)
-#'           
+#'
 #'           minp - minimum number of data points for consideration
-#'                  
+#'
 #'           mindiff - minimum difference in performance for consideration
-#'           
+#'
 #'           minval - minimum value of test results (R2/SPM) for consideration
-#'           
+#'
 #'
 #' Dependencies:
 #'
@@ -340,7 +340,6 @@ Predict.ASEnet <-
   function(Model,
            newHaps,
            ASEmode,
-           halve,
            lambda = "mincverr") {
     # loop over models, looking for corresponding rSNPs to predict genotype level expression
     
@@ -394,21 +393,12 @@ Predict.ASEnet <-
       }
       
       if (ASEmode == 1) {
-        if (halve == 0) {
+        
           ASEpredict <- predict
           
           save(ASEpredict, file = "./ASEpredict.rda")
           
           cat("\n\nASE predictions made! Please,check your source folder")
-          
-        } else{
-          ASEpredict_Halved <- predict
-          
-          save(ASEpredict_Halved, file = "./ASEpredict.rda")
-          
-          cat("\n\nASE predictions made! Please,check your source folder")
-          
-        }
         
       } else{
         Genpredict <- predict
@@ -442,10 +432,10 @@ Plot.mcve.ASEnet <- function(GenModel,
       Genmcve[["sites"]][[length(Genmcve[["sites"]]) + 1]] <-
         names(GenModel[[i]])[j]
       
-      Genmcve[["locations"]][[length(Genmcve[["sites"]]) + 1]] <-
+      Genmcve[["locations"]][[length(Genmcve[["locations"]]) + 1]] <-
         GenModel[[i]][[j]][["location"]]
       
-      Genmcve[["people"]][[length(Genmcve[["sites"]]) + 1]] <-
+      Genmcve[["people"]][[length(Genmcve[["people"]]) + 1]] <-
         GenModel[[i]][[j]][["model"]]$glmnet.fit$nobs
       
       Genmcve[["mcve"]][[length(Genmcve[["mcve"]]) + 1]] <-
@@ -472,10 +462,10 @@ Plot.mcve.ASEnet <- function(GenModel,
       ASEmcve[["sites"]][[length(ASEmcve[["sites"]]) + 1]] <-
         names(ASEModel[[i]])[j]
       
-      ASEmcve[["locations"]][[length(ASEmcve[["sites"]]) + 1]] <-
+      ASEmcve[["locations"]][[length(ASEmcve[["locations"]]) + 1]] <-
         ASEModel[[i]][[j]][["location"]]
       
-      ASEmcve[["people"]][[length(ASEmcve[["sites"]]) + 1]] <-
+      ASEmcve[["people"]][[length(ASEmcve[["people"]]) + 1]] <-
         ASEModel[[i]][[j]][["model"]]$glmnet.fit$nobs
       
       ASEmcve[["mcve"]][[length(ASEmcve[["mcve"]]) + 1]] <-
@@ -517,14 +507,27 @@ Plot.mcve.ASEnet <- function(GenModel,
   
   if (type == 1) {
     data = data.frame(
-      locations = ASEmcveC$locations,
-      Gen_ASE_Model_MCVE_differences = GenmcveC$mcve - ASEmcveC$mcve,
       peopleGen = GenmcveC$people,
-      peopleASE = ASEmcveC$people
+      MCVE_ASE_Model = ASEmcveC$mcve,
+      MCVE_Genotype_Model = GenmcveC$mcve,
+      people = GenmcveC$people
     )
     
-    p <- ggplot(data = data) +
-      geom_jitter(aes(locations, Gen_ASE_Model_MCVE_differences))
+    p <-
+      ggplot(data,
+             aes(MCVE_ASE_Model, MCVE_Genotype_Model, colour = people)) +
+      geom_point() +  scale_colour_gradient(low = "grey", high = "black") +
+      labs(x = "MCVE values for ASE Model",
+           y = "MCVE values for Genotype Level Model")  +
+      xlim(0, max(GenmcveC$mcve, ASEmcveC$mcve)) + ylim(0,  max(GenmcveC$mcve, ASEmcveC$mcve)) + geom_segment(aes(
+        x = 0,
+        y = 0,
+        xend = max(GenmcveC$mcve, ASEmcveC$mcve),
+        yend = max(GenmcveC$mcve, ASEmcveC$mcve)
+      ),
+      color = "black",
+      linetype = 2)
+    
     
     print(p)
     
@@ -556,7 +559,11 @@ Plot.mcve.ASEnet <- function(GenModel,
     
     p <-
       ggplot(data = data.frame(errDif), aes(sites, difs)) + geom_col() +
-      labs(x = paste("Common sites with a MCVE difference lower threshold of ", thold, sep = ""))
+      labs(x = paste(
+        "Common sites with a MCVE difference lower threshold of ",
+        thold,
+        sep = ""
+      ))
     
     print(p)
     
@@ -617,9 +624,10 @@ Plot.R2.ASEnet <- function(Model,
                            #parameters for type 2 plotting
                            site,
                            # parameters for type 3 plotting
+                           sumASE = 1,
                            sModel,
                            spredict,
-                           minp = 100,
+                           minp = 75,
                            mindiff = 0.1,
                            minval = 0.5) {
   i <- 1
@@ -632,6 +640,9 @@ Plot.R2.ASEnet <- function(Model,
     while (j <= length(Model[[i]])) {
       predict[[i]][[j]] <-
         predict[[i]][[j]][which(predict[[i]][[j]][, 1] %in% Model[[i]][[j]][["expression"]][, 1]), ]
+      
+      Model[[i]][[j]][["expression"]] <-
+        Model[[i]][[j]][["expression"]][which(Model[[i]][[j]][["expression"]][, 1] %in% predict[[i]][[j]][, 1]), ]
       
       j <- j + 1
       
@@ -656,6 +667,23 @@ Plot.R2.ASEnet <- function(Model,
     # R2 / spearman correlation
     
     while (j <= length(Model[[i]])) {
+      
+      # if comparing ASE and Gen Models, sum the predicted and observed expression values for the ASE model to have same number of data points to compare
+      
+      if (sumASE == 1) {
+        
+        predict[[i]][[j]] <-
+          cbind(predict[[i]][[j]][which(!grepl("\\s", predict[[i]][[j]][, 1]))], 
+                as.numeric(predict[[i]][[j]][, 2][which(!grepl("\\s",predict[[i]][[j]][, 1]))]) + 
+                  as.numeric(predict[[i]][[j]][, 2][which(grepl("\\s", predict[[i]][[j]][, 1]))]))
+        
+        Model[[i]][[j]][["expression"]] <-
+          cbind(Model[[i]][[j]][["expression"]][which(!grepl("\\s", Model[[i]][[j]][["expression"]][, 1]))], 
+                as.numeric(Model[[i]][[j]][["expression"]][, 2][which(!grepl("\\s",Model[[i]][[j]][["expression"]][, 1]))]) + 
+                  as.numeric(Model[[i]][[j]][["expression"]][, 2][which(grepl("\\s", Model[[i]][[j]][["expression"]][, 1]))]))
+      }
+      
+      
       R2[["sites"]][[length(R2[["sites"]]) + 1]] <-
         names(Model[[i]])[j]
       
@@ -663,13 +691,30 @@ Plot.R2.ASEnet <- function(Model,
         Model[[i]][[j]]$location
       
       R2[["people"]][[length(R2[["people"]]) + 1]] <-
-        Model[[i]][[j]]$model$glmnet.fit$nobs
+        nrow(Model[[i]][[j]]$expression)
       
-      R2[["valuesR2"]][[length(R2[["valuesR2"]]) + 1]] <-
-        summary(lm(as.numeric(predict[[i]][[j]][, 2]) ~ as.numeric(Model[[i]][[j]][["expression"]][, 2])))$r.squared
       
-      R2[["valuesSPM"]][[length(R2[["valuesSPM"]]) + 1]] <-
-        cor(as.numeric(predict[[i]][[j]][, 2]), as.numeric(Model[[i]][[j]][["expression"]][, 2]), method = "spearman")
+      if (test == "R2") {
+        if (sd(predict[[i]][[j]][, 2]) != 0) {
+          R2[["valuesR2"]][[length(R2[["valuesR2"]]) + 1]] <-
+            summary(lm(as.numeric(predict[[i]][[j]][, 2]) ~ as.numeric(Model[[i]][[j]][["expression"]][, 2])))$r.squared
+          
+        } else{
+          R2[["valuesR2"]][[length(R2[["valuesR2"]]) + 1]] <- 0
+        }
+        
+        
+      } else if (test == "SPM") {
+        if (sd(predict[[i]][[j]][, 2]) != 0) {
+          R2[["valuesSPM"]][[length(R2[["valuesSPM"]]) + 1]] <-
+            cor(as.numeric(predict[[i]][[j]][, 2]),
+                as.numeric(Model[[i]][[j]][["expression"]][, 2]),
+                method = "spearman")
+        } else{
+          R2[["valuesSPM"]][[length(R2[["valuesSPM"]]) + 1]] <- 0
+          
+        }
+      }
       
       
       # retrieve observed abd predicted values
@@ -679,10 +724,6 @@ Plot.R2.ASEnet <- function(Model,
       
       observed[names(Model[[i]])[j]] <-
         list(as.numeric(Model[[i]][[j]][["expression"]][, 2]))
-      
-      
-      
-      
       
       j <- j + 1
       
@@ -695,34 +736,31 @@ Plot.R2.ASEnet <- function(Model,
   if (type == 1) {
     # set bins and colour pallete for gradient depending on number of individuals
     
-    bins <- cut(R2[["people"]], 10, include.lowest = TRUE)
-    
     data <-
       data.frame(locations = R2[["locations"]],
                  values = R2[[paste("values", test, sep = "")]],
-                 Data_Points = bins)
+                 Data_Points = R2[["people"]])
     
     p <- ggplot(data, aes(locations, values, color = Data_Points)) +
-      geom_point() + scale_color_grey(start = 0.8, end = 0.2) + theme_classic()
+      geom_point() +  scale_colour_gradient(low = "white", high = "black")
     
     print(p)
     
   } else if (type == 2) {
-    
-    if (hasArg(site)){
-    data <-
-      data.frame(predicted = array(as.numeric(unlist(predicted[[site]]))),
-                 observed = array(as.numeric(unlist(observed[[site]]))))
-    }else{
-      
+    if (hasArg(site)) {
+      data <-
+        data.frame(predicted = array(as.numeric(unlist(predicted[[site]]))),
+                   observed = array(as.numeric(unlist(observed[[site]]))))
+    } else{
       data <-
         data.frame(predicted = array(as.numeric(unlist(predicted))),
                    observed = array(as.numeric(unlist(observed))))
       
     }
     
-    p <- ggplot(data, aes(predicted, observed)) +
-      geom_point()
+    p <-
+      ggplot(data, aes(predicted, observed, color = Data_Points)) +
+      geom_point() + scale_colour_gradient(low = "white", high = "black")
     
     print(p)
     
@@ -736,6 +774,9 @@ Plot.R2.ASEnet <- function(Model,
       while (j <= length(sModel[[i]])) {
         spredict[[i]][[j]] <-
           spredict[[i]][[j]][which(spredict[[i]][[j]][, 1] %in% sModel[[i]][[j]][["expression"]][, 1]), ]
+        
+        sModel[[i]][[j]][["expression"]] <-
+          sModel[[i]][[j]][["expression"]][which(sModel[[i]][[j]][["expression"]][, 1] %in% spredict[[i]][[j]][, 1]), ]
         
         j <- j + 1
         
@@ -762,15 +803,29 @@ Plot.R2.ASEnet <- function(Model,
           sModel[[i]][[j]]$location
         
         sR2[["people"]][[length(sR2[["people"]]) + 1]] <-
-          sModel[[i]][[j]]$model$glmnet.fit$nobs
+          nrow(sModel[[i]][[j]]$expression)
         
-        sR2[["valuesR2"]][[length(sR2[["valuesR2"]]) + 1]] <-
-          summary(lm(as.numeric(spredict[[i]][[j]][, 2]) ~ as.numeric(sModel[[i]][[j]][["expression"]][, 2])))$r.squared
-        
-        sR2[["valuesSPM"]][[length(sR2[["valuesSPM"]]) + 1]] <-
-          cor(as.numeric(spredict[[i]][[j]][, 2]),
-              as.numeric(sModel[[i]][[j]][["expression"]][, 2]),
-              method = "spearman")
+        if (test == "R2") {
+          if (sd(spredict[[i]][[j]][, 2]) != 0) {
+            sR2[["valuesR2"]][[length(sR2[["valuesR2"]]) + 1]] <-
+              summary(lm(as.numeric(spredict[[i]][[j]][, 2]) ~ as.numeric(sModel[[i]][[j]][["expression"]][, 2])))$r.squared
+            
+          } else{
+            sR2[["valuesR2"]][[length(sR2[["valuesR2"]]) + 1]] <- 0
+          }
+          
+          
+        } else if (test == "SPM") {
+          if (sd(spredict[[i]][[j]][, 2]) != 0) {
+            sR2[["valuesSPM"]][[length(sR2[["valuesSPM"]]) + 1]] <-
+              cor(as.numeric(spredict[[i]][[j]][, 2]),
+                  as.numeric(sModel[[i]][[j]][["expression"]][, 2]),
+                  method = "spearman")
+          } else{
+            sR2[["valuesSPM"]][[length(sR2[["valuesSPM"]]) + 1]] <- 0
+            
+          }
+        }
         
         
         j <- j + 1
@@ -795,49 +850,86 @@ Plot.R2.ASEnet <- function(Model,
     sR2c$valuesR2 <- sR2$valuesR2[which(sR2$sites %in% R2$sites)]
     sR2c$valuesSPM <- sR2$valuesSPM[which(sR2$sites %in% R2$sites)]
     
-    bins <- cut(R2c[["people"]], 10, include.lowest = TRUE)
     
     data <-
       data.frame(
         Model_values = R2c[[paste("values", test, sep = "")]],
         sModel_values = sR2c[[paste("values", test, sep = "")]],
-        DP_Model1 = bins
+        Data_Points = R2c$people
       )
     
     intpoints <- list()
     
-    intpoints$R2 <-
-      R2c$sites[which(R2c$valuesR2 - sR2c$valuesR2 > 0.1 &
-                        R2c$people > 100 & R2c$valuesR2 > 0.5)]
-    intpoints$R2M1 <-
-      R2c$valuesR2[which(R2c$valuesR2 - sR2c$valuesR2 > 0.1 &
-                        R2c$people > 100 & R2c$valuesR2 > 0.5)]
-    intpoints$R2M2 <-
-      sR2c$valuesR2[which(R2c$valuesR2 - sR2c$valuesR2 > 0.1 &
-                        R2c$people > 100 & R2c$valuesR2 > 0.5)]
+    if (test == "R2") {
+      intpoints$R2 <-
+        R2c$sites[which(R2c$valuesR2 - sR2c$valuesR2 > mindiff &
+                          R2c$people > minp &
+                          R2c$valuesR2 > minval)]
+      intpoints$R2M1 <-
+        R2c$valuesR2[which(R2c$valuesR2 - sR2c$valuesR2 > mindiff &
+                             R2c$people > minp &
+                             R2c$valuesR2 > minval)]
+      intpoints$R2M2 <-
+        sR2c$valuesR2[which(R2c$valuesR2 - sR2c$valuesR2 > mindiff &
+                              R2c$people > minp &
+                              R2c$valuesR2 > minval)]
+      
+    } else if (test == "SPM") {
+      intpoints$SPM <-
+        R2c$sites[which(
+          R2c$valuesSPM - sR2c$valuesSPM > mindiff &
+            R2c$people > minp & R2c$valuesSPM > minval
+        )]
+      intpoints$SPMM1 <-
+        R2c$valuesSPM[which(
+          R2c$valuesSPM - sR2c$valuesSPM > mindiff &
+            R2c$people > minp &
+            R2c$valuesSPM > minval
+        )]
+      intpoints$SPMM2 <-
+        sR2c$valuesSPM[which(
+          R2c$valuesSPM - sR2c$valuesSPM > mindiff &
+            R2c$people > minp &
+            R2c$valuesSPM > minval
+        )]
+      
+    }
     
-    intpoints$SPM <-
-      R2c$sites[which(R2c$valuesSPM - sR2c$valuesSPM > 0.1 &
-                        R2c$people > 100 & R2c$valuesSPM > 0.5)]
-    intpoints$SPMM1 <-
-      R2c$valuesSPM[which(R2c$valuesSPM - sR2c$valuesSPM > 0.1 &
-                           R2c$people > 100 & R2c$valuesSPM > 0.5)]
-    intpoints$SPMM2 <-
-      sR2c$valuesSPM[which(R2c$valuesSPM - sR2c$valuesSPM > 0.1 &
-                            R2c$people > 100 & R2c$valuesSPM > 0.5)]
+    if (test == "R2") {
+      x <- intpoints$R2M1
+    } else{
+      x <- intpoints$SPMM1
+    }
+    if (test == "R2") {
+      y <- intpoints$R2M2
+    } else{
+      y <- intpoints$SPMM2
+    }
+    if (test == "R2") {
+      label <- intpoints$R2
+    } else{
+      label <- intpoints$SPM
+    }
     
-    if (test=="R2"){x <- intpoints$R2M1}else{x <- intpoints$SPMM1}
-    if (test=="R2"){y <- intpoints$R2M2}else{y <- intpoints$SPMM2}
-    if (test=="R2"){label <- intpoints$R2}else{label <- intpoints$SPM}
-
     
     p <-
       ggplot(data,
-             aes(Model_values, sModel_values, color = DP_Model1)) +
-      geom_point() + scale_color_grey(start = 0.8, end = 0.2) + theme_classic() +
+             aes(Model_values, sModel_values, colour = Data_Points)) +
+      geom_point() +  scale_colour_gradient(low = "grey", high = "black") +
       labs(x = paste(test, "values for Model 1"),
            y = paste(test, "values for Model 2")) +
-      annotate(geom = "text",x=x,y=y,label=label)
+      annotate(
+        geom = "text",
+        x = x,
+        y = y,
+        label = label
+      ) +
+      xlim(0, 1) + ylim(0, 1) + geom_segment(aes(
+        x = 0,
+        y = 0,
+        xend = 1,
+        yend = 1
+      ), linetype = 2)
     
     print(p)
     
