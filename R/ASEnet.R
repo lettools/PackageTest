@@ -111,7 +111,8 @@ Train.ASEnet <-
            alpha = 0.5,
            min = 10,
            nfolds = 10,
-           halve = 0) {
+           halve = 0,
+           debug ="rs3966372") {
     cat(
       paste(
         "\nParameters selected: \nWindow ->",
@@ -126,7 +127,10 @@ Train.ASEnet <-
         nfolds,
         "\nHalve data?: ",
         halve,
+        "\nSite of interest: ",
+        debug,
         "\n"
+        
       )
     )
     
@@ -271,6 +275,8 @@ Train.ASEnet <-
         
         if (length(unique(currASET)) >= min) {
           cat(" - ", length(currASET), " data points used for model ")
+          
+          if (unique(snpASE$ID)[j] == debug){cat("gene of interest!")}
           
           ASEModel[[currGene]][[unique(snpASE$ID)[j]]][["model"]] <-
             cv.glmnet(currVars,
@@ -619,17 +625,18 @@ Plot.mcve.ASEnet <- function(GenModel,
 
 Plot.R2.ASEnet <- function(Model,
                            predict,
-                           test = "R2",
+                           test = "SPM",
                            type = 1,
                            #parameters for type 2 plotting
                            site,
                            # parameters for type 3 plotting
-                           sumASE = 0,
+                           sumASE = 1,
                            sModel,
                            spredict,
                            minp = 75,
-                           mindiff = 0.1,
-                           minval = 0.5) {
+                           mindiff = 0.5,
+                           minval = 0.5,
+                           aseDat) {
   i <- 1
   
   # retrieve predictions of known expressions to calculate R2
@@ -667,7 +674,8 @@ Plot.R2.ASEnet <- function(Model,
     # R2 / spearman correlation
     
     while (j <= length(Model[[i]])) {
-      # if comparing ASE and Gen Models, sum the predicted and observed expression values for the ASE model to have same number of data points to compare
+      #' if comparing ASE and Gen Models, sum the predicted and observed expression values for the ASE model 
+      #' to have same number of data points to compare
       
       if (sumASE == 1) {
         predict[[i]][[j]] <-
@@ -758,7 +766,7 @@ Plot.R2.ASEnet <- function(Model,
     }
     
     p <-
-      ggplot(data, aes(predicted, observed, color = Data_Points)) +
+      ggplot(data, aes(predicted, observed)) +
       geom_point() + scale_colour_gradient(low = "white", high = "black")
     
     print(p)
@@ -858,12 +866,30 @@ Plot.R2.ASEnet <- function(Model,
     
     intpoints <- rep("", length(R2c$sites))
     
-    intpoints[which(R2c$values - sR2c$values > mindiff &
-                      R2c$people > minp &
-                      R2c$values > minval)] <-
-      R2c$sites[which(R2c$values - sR2c$values > mindiff &
+    intpointscon <-
+      R2c$sites[which(abs(R2c$values - sR2c$values) > mindiff &
                         R2c$people > minp &
-                        R2c$values > minval)]
+                        (R2c$values > minval | sR2c$values > minval))]
+    ai <- list()
+    tr <- list()
+    i <- 1
+    
+    while (i <= length(intpointscon)) {
+      
+      ai[i] <- round(mean(aseDat$ASE$binomp[which(aseDat$ASE$ID ==
+                                             intpointscon[i])]),digits=2)
+      
+      tr[i] <- round(mean(aseDat$ASE$totalReads[which(aseDat$ASE$ID ==
+                                              intpointscon[i])]),digits=1)
+      
+      i <- i + 1
+      
+    }
+    
+    intpoints[which(abs(R2c$values - sR2c$values) > mindiff &
+                      R2c$people > minp &
+                      (R2c$values > minval | sR2c$values > minval))] <-
+      paste(intpointscon, ai, tr, sep = "_")
     
     
     p <-
@@ -875,8 +901,8 @@ Plot.R2.ASEnet <- function(Model,
                label = intpoints
              )) +
       geom_point() +  scale_colour_gradient(low = "grey", high = "black") +
-      labs(x = paste(test, "values for Model 1"),
-           y = paste(test, "values for Model 2")) +
+      labs(x = paste(test, "values for ASE Model"),
+           y = paste(test, "values for Genotype Model")) +
       geom_text_repel() +
       xlim(0, 1) + ylim(0, 1) + geom_segment(aes(
         x = 0,
