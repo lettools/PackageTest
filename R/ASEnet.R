@@ -112,7 +112,7 @@ Train.ASEnet <-
            min = 10,
            nfolds = 10,
            halve = 0,
-           debug ="rs3966372") {
+           debug = "rs79503") {
     cat(
       paste(
         "\nParameters selected: \nWindow ->",
@@ -256,7 +256,6 @@ Train.ASEnet <-
             currVars <- currVarsR
             currASET <- as.matrix(currASE$refCountN)
             
-            
           }
           
           
@@ -276,7 +275,9 @@ Train.ASEnet <-
         if (length(unique(currASET)) >= min) {
           cat(" - ", length(currASET), " data points used for model ")
           
-          if (unique(snpASE$ID)[j] == debug){cat("gene of interest!")}
+          if (unique(snpASE$ID)[j] == debug) {
+            cat("gene of interest!")
+          }
           
           ASEModel[[currGene]][[unique(snpASE$ID)[j]]][["model"]] <-
             cv.glmnet(currVars,
@@ -446,7 +447,7 @@ Plot.mcve.ASEnet <- function(GenModel,
       
       Genmcve[["mcve"]][[length(Genmcve[["mcve"]]) + 1]] <-
         GenModel[[i]][[j]][["model"]]$cvm[which(GenModel[[i]][[j]][["model"]]$lambda == GenModel[[i]][[j]][["model"]]$lambda.min)]
-    
+      
       j <- j + 1
       
     }
@@ -625,18 +626,21 @@ Plot.mcve.ASEnet <- function(GenModel,
 
 Plot.R2.ASEnet <- function(Model,
                            predict,
+                           sModel,
+                           # if type=3
+                           spredict,
+                           # if type=3
+                           aseDat,
+                           # if type 3
                            test = "SPM",
-                           type = 1,
+                           type = 3,
                            #parameters for type 2 plotting
                            site,
                            # parameters for type 3 plotting
                            sumASE = 1,
-                           sModel,
-                           spredict,
                            minp = 75,
                            mindiff = 0.5,
-                           minval = 0.5,
-                           aseDat) {
+                           minval = 0.5) {
   i <- 1
   
   # retrieve predictions of known expressions to calculate R2
@@ -674,7 +678,7 @@ Plot.R2.ASEnet <- function(Model,
     # R2 / spearman correlation
     
     while (j <= length(Model[[i]])) {
-      #' if comparing ASE and Gen Models, sum the predicted and observed expression values for the ASE model 
+      #' if comparing ASE and Gen Models, sum the predicted and observed expression values for the ASE model
       #' to have same number of data points to compare
       
       if (sumASE == 1) {
@@ -812,11 +816,63 @@ Plot.R2.ASEnet <- function(Model,
         sR2[["people"]][[length(sR2[["people"]]) + 1]] <-
           nrow(sModel[[i]][[j]]$expression)
         
+        # halving prediction expression data in genotype level and correlating to ASE expression (try code
+        # provides means to get the ASE expression of the genotype level models , as might not be the same)
+        
+        if (sumASE == 0) {
+          spredictR2 <-
+            c(0.5 * as.numeric(spredict[[i]][[j]][, 2]),
+              0.5 * as.numeric(spredict[[i]][[j]][, 2]))
+          
+          names(spredictR2) <-
+            c(names(spredict[[i]][[j]][, 2]), paste(names(spredict[[i]][[j]][, 2]), "_1", sep =
+                                                      ""))
+          
+          if (class(try(is.character(Model[[names(sModel[i])]][[names(sModel[i][[j]])]][["expression"]][, 2]), silent = TRUE)) != "try-error")
+          {
+            if (is.null(Model[[names(sModel[i])]][[names(sModel[i][[j]])]]))
+              
+            {
+              sModel_expR2 <- rep(NaN, length(spredictR2))
+            }
+            
+            else{
+              sModel_expR2 <-
+                Model[[names(sModel[i])]][[names(sModel[i][[j]])]][["expression"]][, 2]
+            }
+          }
+          else{
+            sModel_expR2 <- rep(NaN, length(spredictR2))
+          }
+          
+          # correlating to halved Genotype level expression
+          
+          # if (sumASE == 0) {
+          #   spredictR2 <-
+          #     c(0.5 * as.numeric(spredict[[i]][[j]][, 2]),
+          #       0.5 * as.numeric(spredict[[i]][[j]][, 2]))
+          #
+          #   names(spredictR2) <-
+          #     c(names(spredict[[i]][[j]][, 2]), paste(names(spredict[[i]][[j]][, 2]), "_1", sep =
+          #                                               ""))
+          #
+          #   sModel_expR2 <- c(0.5 * as.numeric(sModel[[i]][[j]][["expression"]][, 2]),
+          #                     0.5 * as.numeric(sModel[[i]][[j]][["expression"]][, 2]))
+          
+        } else{
+          spredictR2 <- spredict[[i]][[j]][, 2]
+          
+          sModel_expR2 <- sModel[[i]][[j]][["expression"]][, 2]
+          
+        }
+        
         if (test == "R2") {
-          if (sd(spredict[[i]][[j]][, 2]) != 0) {
+          if (sd(spredictR2) != 0) {
             sR2[["values"]][[length(sR2[["values"]]) + 1]] <-
-              summary(lm(as.numeric(spredict[[i]][[j]][, 2]) ~
-                           as.numeric(sModel[[i]][[j]][["expression"]][, 2])))$r.squared
+              summary(lm(
+                as.numeric(spredictR2) ~
+                  as.numeric(sModel_expR2)
+              ))$r.squared
             
           } else{
             sR2[["values"]][[length(sR2[["values"]]) + 1]] <- 0
@@ -824,11 +880,12 @@ Plot.R2.ASEnet <- function(Model,
           
           
         } else if (test == "SPM") {
-          if (sd(spredict[[i]][[j]][, 2]) != 0) {
+          if (sd(spredictR2) != 0) {
             sR2[["values"]][[length(sR2[["values"]]) + 1]] <-
-              cor(as.numeric(spredict[[i]][[j]][, 2]),
-                  as.numeric(sModel[[i]][[j]][["expression"]][, 2]),
+              cor(as.numeric(spredictR2),
+                  as.numeric(sModel_expR2),
                   method = "spearman")
+            
           } else{
             sR2[["values"]][[length(sR2[["values"]]) + 1]] <- 0
             
@@ -867,29 +924,44 @@ Plot.R2.ASEnet <- function(Model,
     intpoints <- rep("", length(R2c$sites))
     
     intpointscon <-
-      R2c$sites[which(abs(R2c$values - sR2c$values) > mindiff &
-                        R2c$people > minp &
-                        (R2c$values > minval | sR2c$values > minval))]
-    ai <- list()
-    tr <- list()
+      R2c$sites[which(
+        abs(R2c$values - sR2c$values) > mindiff &
+          R2c$people > minp &
+          (R2c$values > minval |
+             sR2c$values > minval)
+      )]
+    ref <- list()
+    alt <- list()
     i <- 1
     
     while (i <= length(intpointscon)) {
+      ref[i] <-
+        paste(round(mean(aseDat$ASE$refCount[which(aseDat$ASE$ID ==
+                                                     intpointscon[i])]), digits =
+                      2),
+              round(sd(aseDat$ASE$refCount[which(aseDat$ASE$ID ==
+                                                   intpointscon[i])]), digits =
+                      2), sep = "+-")
       
-      ai[i] <- round(mean(aseDat$ASE$binomp[which(aseDat$ASE$ID ==
-                                             intpointscon[i])]),digits=2)
-      
-      tr[i] <- round(mean(aseDat$ASE$totalReads[which(aseDat$ASE$ID ==
-                                              intpointscon[i])]),digits=1)
+      alt[i] <-
+        paste(round(mean(aseDat$ASE$altCount[which(aseDat$ASE$ID ==
+                                                     intpointscon[i])]), digits =
+                      2),
+              round(sd(aseDat$ASE$altCount[which(aseDat$ASE$ID ==
+                                                   intpointscon[i])]), digits =
+                      1), sep = "+-")
       
       i <- i + 1
       
     }
     
-    intpoints[which(abs(R2c$values - sR2c$values) > mindiff &
-                      R2c$people > minp &
-                      (R2c$values > minval | sR2c$values > minval))] <-
-      paste(intpointscon, ai, tr, sep = "_")
+    intpoints[which(
+      abs(R2c$values - sR2c$values) > mindiff &
+        R2c$people > minp &
+        (R2c$values > minval |
+           sR2c$values > minval)
+    )] <-
+      paste(intpointscon, ref, alt, sep = "_")
     
     
     p <-
@@ -901,9 +973,11 @@ Plot.R2.ASEnet <- function(Model,
                label = intpoints
              )) +
       geom_point() +  scale_colour_gradient(low = "grey", high = "black") +
-      labs(x = paste(test, "values for ASE Model"),
-           y = paste(test, "values for Genotype Model")) +
-      geom_text_repel() +
+      labs(
+        x = paste(test, "values for ASE Model"),
+        y = paste(test, "values for Genotype Model")
+      ) +
+      geom_label_repel(size = 2.6) +
       xlim(0, 1) + ylim(0, 1) + geom_segment(aes(
         x = 0,
         y = 0,
