@@ -29,6 +29,14 @@
 #'
 #'           halve - only use reference allele for modelling, to have same number of data points as genotype level
 #'                   modelling
+#'                   
+#' makeTestHaps.ASEnet: Function to create test haplotypes from aseDat file. Creates one file of allele-specific 
+#' haplotypes as found in aseDat and another file containing combined haplotype data for both alleles of each 
+#' individual
+#'
+#' Arguments:
+#'
+#'          aseDat - aseDat file containing the haplotype information
 #'
 #'
 #' Predict.ASEnet: Uses output model generated in Train.ASEnet, as well as chromosome-level rSNP data to make
@@ -343,6 +351,50 @@ Train.ASEnet <-
     
   }
 
+MakeTestHaps.ASEnet <- function(aseDat, halve = 0) {
+  testHapsASE <- aseDat$haps
+  
+  #extract and join haplotypes for genotype level prediction
+  testHapsGen <- list()
+  colnames <- list()
+  
+  i <- 1
+  j <- 1
+  
+  while (i < length(testHapsASE)) {
+    testHapsGen[[j]] <- testHapsASE[[i]] + testHapsASE[[i + 1]]
+    colnames[[j]] <- colnames(testHapsASE)[[i]]
+    i <- i + 2
+    j <- j + 1
+  }
+  
+  testHapsGen <- as.data.frame(testHapsGen)
+  
+  rownames(testHapsGen) <- rownames(testHapsASE)
+  colnames(testHapsGen) <- colnames
+  
+  # rename and reorder haplotypes for prediction
+  colnames(testHapsASE)[seq(0, length(testHapsASE), by = 2)] <-
+    paste(colnames(testHapsASE)[seq(0, length(testHapsASE), by = 2)], " 1", sep = "")
+  
+  tempTHASE1 <-
+    testHapsASE[which(grepl("\\s", colnames(testHapsASE))) - 1]
+  tempTHASE2 <-
+    testHapsASE[which(grepl("\\s", colnames(testHapsASE)))]
+  
+  if (halve == 0) {
+    testHapsASE <- cbind(tempTHASE1, tempTHASE2)
+    save(testHapsASE, file = "./testHapsASE.rda")
+    
+  } else if (halve == 1) {
+    testHapsASE_halved <- tempTHASE1
+    save(testHapsASE_halved, file = "./testHapsASE_halved.rda")
+  }
+  
+  save(testHapsGen, file = "./testHapsGen.rda")
+  
+}
+
 
 Predict.ASEnet <-
   function(Model,
@@ -426,6 +478,7 @@ Plot.mcve.ASEnet <- function(GenModel,
                              ASEModel,
                              type = 1,
                              thold = 0.001) {
+  
   # retrieve genotype level expression mean cross validated error values
   
   Genmcve <- list()
@@ -637,10 +690,10 @@ Plot.R2.ASEnet <- function(Model,
                            #parameters for type 2 plotting
                            site,
                            # parameters for type 3 plotting
-                           sumASE = 1,
-                           minp = 75,
-                           mindiff = 0.5,
-                           minval = 0.5) {
+                           sumASE = 0,
+                           minp = 0,
+                           mindiff = 0.26,
+                           minval = 0.65) {
   i <- 1
   
   # retrieve predictions of known expressions to calculate R2
@@ -913,7 +966,6 @@ Plot.R2.ASEnet <- function(Model,
     sR2c$sites <- sR2$sites[which(sR2$sites %in% R2$sites)]
     sR2c$values <- sR2$values[which(sR2$sites %in% R2$sites)]
     
-    
     data <-
       data.frame(
         Model_values = R2c[["values"]],
@@ -927,42 +979,75 @@ Plot.R2.ASEnet <- function(Model,
       R2c$sites[which(
         abs(R2c$values - sR2c$values) > mindiff &
           R2c$people > minp &
-          (R2c$values > minval |
-             sR2c$values > minval)
+          (R2c$values > minval | sR2c$values > minval) &
+          R2c$values != 0 &
+          sR2c$values != 0
+        
       )]
-    ref <- list()
-    alt <- list()
+    ai <- list()
+    aisd <- list()
     i <- 1
     
     while (i <= length(intpointscon)) {
-      ref[i] <-
-        paste(round(mean(aseDat$ASE$refCount[which(aseDat$ASE$ID ==
-                                                     intpointscon[i])]), digits =
-                      2),
-              round(sd(aseDat$ASE$refCount[which(aseDat$ASE$ID ==
-                                                   intpointscon[i])]), digits =
-                      2), sep = "+-")
+      ai[i] <-
+        mean(aseDat$ASE$binomp[which(aseDat$ASE$ID == intpointscon[i])])
       
-      alt[i] <-
-        paste(round(mean(aseDat$ASE$altCount[which(aseDat$ASE$ID ==
-                                                     intpointscon[i])]), digits =
-                      2),
-              round(sd(aseDat$ASE$altCount[which(aseDat$ASE$ID ==
-                                                   intpointscon[i])]), digits =
-                      1), sep = "+-")
-      
+      aisd[i] <-
+        sd(aseDat$ASE$binomp[which(aseDat$ASE$ID == intpointscon[i])])
       i <- i + 1
-      
     }
     
     intpoints[which(
       abs(R2c$values - sR2c$values) > mindiff &
         R2c$people > minp &
-        (R2c$values > minval |
-           sR2c$values > minval)
+        (R2c$values > minval | sR2c$values > minval) &
+        R2c$values != 0 &
+        sR2c$values != 0
+      
     )] <-
-      paste(intpointscon, ref, alt, sep = "_")
+      paste(intpointscon, paste(
+        round(as.numeric(ai), digits = 2),
+        round(as.numeric(aisd), digits = 2),
+        sep = "+-"
+      ), sep = "_")
     
+    
+    intpointsSave <-
+      
+      data.frame(
+        sites=R2c$sites[which(
+          abs(R2c$values - sR2c$values) > mindiff &
+            R2c$people > minp &
+            (R2c$values > minval | sR2c$values > minval) &
+            R2c$values != 0 &
+            sR2c$values != 0
+          
+        )],
+        valuesASE=R2c$values[which(
+          abs(R2c$values - sR2c$values) > mindiff &
+            R2c$people > minp &
+            (R2c$values > minval | sR2c$values > minval) &
+            R2c$values != 0 &
+            sR2c$values != 0
+          
+        )],
+        valuesGen=sR2c$values[which(
+          abs(R2c$values - sR2c$values) > mindiff &
+            R2c$people > minp &
+            (R2c$values > minval | sR2c$values > minval) &
+            R2c$values != 0 &
+            sR2c$values != 0
+        )],
+        ai=as.numeric(ai),
+        aisd=as.numeric(aisd),
+        people=as.numeric(data$Data_Points[which(abs(R2c$values - sR2c$values) > mindiff &
+                                            R2c$people > minp &
+                                            (R2c$values > minval | sR2c$values > minval) &
+                                            R2c$values != 0 &
+                                            sR2c$values != 0)])
+      )
+    
+    save(intpointsSave, file = "intpoints.rda")
     
     p <-
       ggplot(data,
@@ -972,7 +1057,8 @@ Plot.R2.ASEnet <- function(Model,
                colour = Data_Points,
                label = intpoints
              )) +
-      geom_point() +  scale_colour_gradient(low = "grey", high = "black") +
+      geom_point() +
+      scale_colour_gradient(low = "grey", high = "black") +
       labs(
         x = paste(test, "values for ASE Model"),
         y = paste(test, "values for Genotype Model")
@@ -992,3 +1078,14 @@ Plot.R2.ASEnet <- function(Model,
   cat("Plot created, please check the plot window in RStudio")
   
 }
+
+Compare.ASEnet <-
+  function(intpoints){
+    
+  betASE <- intpoints[which(intpoints$valuesASE > intpoints$valuesGen),]
+  betGen <- intpoints[which(intpoints$valuesGen > intpoints$valuesASE),]
+    
+  print(t.test(betASE$people,betGen$people))
+  print(t.test(betASE$ai,betGen$ai))
+    
+  }
