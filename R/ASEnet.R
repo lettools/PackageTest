@@ -66,14 +66,14 @@
 #'Arguments:
 #'
 #'           GenModel / ASEModel - Rdata files, output of the Train.Asenet function, containing the models built for
-#'                              genotype level and chromosome level prediction accordingly
+#'                                 genotype level and chromosome level prediction accordingly
 #'
-#'           type - type 1 displays difference in accuracy between models across common mutations, type 2 shows a ranking
+#'           type - type 1 displays accuracy of models across common mutations plotted against each other, type 2 shows a ranking
 #'                  of the expression sites with a higher difference and type 3 shows actual mcve errors for each model
 #'                  across common expression locations
 #'
 #'           thold - for types 2 and 3, mcve threshold of shown expression locations (type 3 displays any expression locations
-#'                  for which any of the two models suprpasses the threshold)
+#'                   for which any of the two models suprpasses the threshold)
 #'
 #'
 #'Plot.R2.ASEnet: Plots observed expression values against predicted values. Also calculates and plots the value of r squared
@@ -84,14 +84,21 @@
 #'           model - ASE or genotype level model file, containing expression observed at each modelled site
 #'
 #'           predict - predictions of gene expression values, outputted from the Predict.ASEnet function
+#'           
+#'           GenModel/Genpredict - model and predict files for secondary model for type 3 plotting
+#'           
+#'           aseDat - aseDat file for metadata correlation
 #'
 #'           test - "R2" for r squared testing and "SPM" for spearman testing
 #'
 #'           type - type 1 plots the R2 value across gene expressionsites, type 2 shows an observed vs
 #'                  predicted scatter plot (if site selected of a site, otherwise of all sites), type 3
-#'                  plots R2 / SPM values of a model against a secondary model (sModel and spredict needed)
-#'
-#'           sModel/spredict - model and predict files for secondary model for tyoe 3 plotting
+#'                  plots R2 / SPM values of a model against a secondary model (GenModel and Genpredict needed)
+#'                  
+#'           site - character string for type 2 ploting
+#'           
+#'           sumASE - if 0 selected, genotype predictions are halved and compared to ASE, 
+#'                    if 1 selected allele-specuific predictions are added up and compared to total expression
 #'
 #'           BEST POINTS SELECTION (in terms of performance of primary vs secondary model)
 #'
@@ -104,9 +111,10 @@
 #'
 #' Dependencies:
 #'
-#'             library(tidyverse)
-#'             library(reshape2)
+#'             library(dplyr)
 #'             library(glmnet)
+#'             library(ggplot2)
+#'             library(reshape2)
 #'             library(ggrepel)
 #'
 #'
@@ -119,8 +127,9 @@ Train.ASEnet <-
            alpha = 0.5,
            min = 10,
            nfolds = 10,
-           halve = 0,
-           debug = "rs79503") {
+           halve = 0
+           # , debug = "rs79503"
+           ) {
     cat(
       paste(
         "\nParameters selected: \nWindow ->",
@@ -134,10 +143,10 @@ Train.ASEnet <-
         "\nNumber of folds for cross-validation -> ",
         nfolds,
         "\nHalve data?: ",
-        halve,
-        "\nSite of interest: ",
-        debug,
-        "\n"
+        halve
+        # "\nSite of interest: ",
+        # # debug,
+        # # "\n"
         
       )
     )
@@ -235,7 +244,6 @@ Train.ASEnet <-
         
         cat("\nCurrent ASE site: ", unique(snpASE$ID)[j])
         
-        
         # nearby variants of the reference alleles on that ASE site
         
         currVarsR <-
@@ -266,7 +274,6 @@ Train.ASEnet <-
             
           }
           
-          
           # PREDIXCAN mode
           
         } else{
@@ -283,9 +290,9 @@ Train.ASEnet <-
         if (length(unique(currASET)) >= min) {
           cat(" - ", length(currASET), " data points used for model ")
           
-          if (unique(snpASE$ID)[j] == debug) {
-            cat("gene of interest!")
-          }
+          # if (unique(snpASE$ID)[j] == debug) {
+          #   cat("gene of interest!")
+          # }
           
           ASEModel[[currGene]][[unique(snpASE$ID)[j]]][["model"]] <-
             cv.glmnet(currVars,
@@ -677,11 +684,11 @@ Plot.mcve.ASEnet <- function(GenModel,
   
 }
 
-Plot.R2.ASEnet <- function(Model,
-                           predict,
-                           sModel,
+Plot.R2.ASEnet <- function(ASEModel,
+                           ASEpredict,
+                           GenModel,
                            # if type=3
-                           spredict,
+                           Genpredict,
                            # if type=3
                            aseDat,
                            # if type 3
@@ -698,18 +705,18 @@ Plot.R2.ASEnet <- function(Model,
   
   # retrieve predictions of known expressions to calculate R2
   
-  while (i <= length(Model)) {
+  while (i <= length(ASEModel)) {
     j <- 1
     
-    while (j <= length(Model[[i]])) {
-      predict[[i]][[j]] <-
-        predict[[i]][[j]][which(predict[[i]][[j]][, 1] %in% Model[[i]][[j]][["expression"]][, 1]), ]
+    while (j <= length(ASEModel[[i]])) {
+      ASEpredict[[i]][[j]] <-
+        ASEpredict[[i]][[j]][which(ASEpredict[[i]][[j]][, 1] %in% ASEModel[[i]][[j]][["expression"]][, 1]), ]
       
-      Model[[i]][[j]][["expression"]] <-
-        Model[[i]][[j]][["expression"]][which(Model[[i]][[j]][["expression"]][, 1] %in% predict[[i]][[j]][, 1]), ]
+      ASEModel[[i]][[j]][["expression"]] <-
+        ASEModel[[i]][[j]][["expression"]][which(ASEModel[[i]][[j]][["expression"]][, 1] %in% ASEpredict[[i]][[j]][, 1]), ]
       
       j <- j + 1
-      
+        
     }
     
     i <- i + 1
@@ -725,43 +732,43 @@ Plot.R2.ASEnet <- function(Model,
   
   i <- 1
   
-  while (i <= length(Model)) {
+  while (i <= length(ASEModel)) {
     j <- 1
     
     # R2 / spearman correlation
     
-    while (j <= length(Model[[i]])) {
+    while (j <= length(ASEModel[[i]])) {
       #' if comparing ASE and Gen Models, sum the predicted and observed expression values for the ASE model
       #' to have same number of data points to compare
       
       if (sumASE == 1) {
-        predict[[i]][[j]] <-
-          cbind(predict[[i]][[j]][which(!grepl("\\s", predict[[i]][[j]][, 1]))],
-                as.numeric(predict[[i]][[j]][, 2][which(!grepl("\\s", predict[[i]][[j]][, 1]))]) +
-                  as.numeric(predict[[i]][[j]][, 2][which(grepl("\\s", predict[[i]][[j]][, 1]))]))
+        ASEpredict[[i]][[j]] <-
+          cbind(ASEpredict[[i]][[j]][which(!grepl("\\s", ASEpredict[[i]][[j]][, 1]))],
+                as.numeric(ASEpredict[[i]][[j]][, 2][which(!grepl("\\s", ASEpredict[[i]][[j]][, 1]))]) +
+                  as.numeric(ASEpredict[[i]][[j]][, 2][which(grepl("\\s", ASEpredict[[i]][[j]][, 1]))]))
         
-        Model[[i]][[j]][["expression"]] <-
-          cbind(Model[[i]][[j]][["expression"]][which(!grepl("\\s", Model[[i]][[j]][["expression"]][, 1]))],
-                as.numeric(Model[[i]][[j]][["expression"]][, 2][which(!grepl("\\s", Model[[i]][[j]][["expression"]][, 1]))]) +
-                  as.numeric(Model[[i]][[j]][["expression"]][, 2][which(grepl("\\s", Model[[i]][[j]][["expression"]][, 1]))]))
+        ASEModel[[i]][[j]][["expression"]] <-
+          cbind(ASEModel[[i]][[j]][["expression"]][which(!grepl("\\s", ASEModel[[i]][[j]][["expression"]][, 1]))],
+                as.numeric(ASEModel[[i]][[j]][["expression"]][, 2][which(!grepl("\\s", ASEModel[[i]][[j]][["expression"]][, 1]))]) +
+                  as.numeric(ASEModel[[i]][[j]][["expression"]][, 2][which(grepl("\\s", ASEModel[[i]][[j]][["expression"]][, 1]))]))
       }
       
       
       R2[["sites"]][[length(R2[["sites"]]) + 1]] <-
-        names(Model[[i]])[j]
+        names(ASEModel[[i]])[j]
       
       R2[["locations"]][[length(R2[["locations"]]) + 1]] <-
-        Model[[i]][[j]]$location
+        ASEModel[[i]][[j]]$location
       
       R2[["people"]][[length(R2[["people"]]) + 1]] <-
-        nrow(Model[[i]][[j]]$expression)
+        nrow(ASEModel[[i]][[j]]$expression)
       
       
       if (test == "R2") {
-        if (sd(predict[[i]][[j]][, 2]) != 0) {
+        if (sd(ASEpredict[[i]][[j]][, 2]) != 0) {
           R2[["values"]][[length(R2[["values"]]) + 1]] <-
-            summary(lm(as.numeric(predict[[i]][[j]][, 2]) ~
-                         as.numeric(Model[[i]][[j]][["expression"]][, 2])))$r.squared
+            summary(lm(as.numeric(ASEpredict[[i]][[j]][, 2]) ~
+                         as.numeric(ASEModel[[i]][[j]][["expression"]][, 2])))$r.squared
           
         } else{
           R2[["values"]][[length(R2[["values"]]) + 1]] <- 0
@@ -769,10 +776,10 @@ Plot.R2.ASEnet <- function(Model,
         
         
       } else if (test == "SPM") {
-        if (sd(predict[[i]][[j]][, 2]) != 0) {
+        if (sd(ASEpredict[[i]][[j]][, 2]) != 0) {
           R2[["values"]][[length(R2[["values"]]) + 1]] <-
-            cor(as.numeric(predict[[i]][[j]][, 2]),
-                as.numeric(Model[[i]][[j]][["expression"]][, 2]),
+            cor(as.numeric(ASEpredict[[i]][[j]][, 2]),
+                as.numeric(ASEModel[[i]][[j]][["expression"]][, 2]),
                 method = "spearman")
         } else{
           R2[["values"]][[length(R2[["values"]]) + 1]] <- 0
@@ -783,11 +790,11 @@ Plot.R2.ASEnet <- function(Model,
       
       # retrieve observed abd predicted values
       
-      predicted[names(Model[[i]])[j]] <-
-        list(as.numeric(predict[[i]][[j]][, 2]))
+      predicted[names(ASEModel[[i]])[j]] <-
+        list(as.numeric(ASEpredict[[i]][[j]][, 2]))
       
-      observed[names(Model[[i]])[j]] <-
-        list(as.numeric(Model[[i]][[j]][["expression"]][, 2]))
+      observed[names(ASEModel[[i]])[j]] <-
+        list(as.numeric(ASEModel[[i]][[j]][["expression"]][, 2]))
       
       j <- j + 1
       
@@ -832,15 +839,15 @@ Plot.R2.ASEnet <- function(Model,
   } else if (type == 3) {
     i <- 1
     
-    while (i <= length(sModel)) {
+    while (i <= length(GenModel)) {
       j <- 1
       
-      while (j <= length(sModel[[i]])) {
-        spredict[[i]][[j]] <-
-          spredict[[i]][[j]][which(spredict[[i]][[j]][, 1] %in% sModel[[i]][[j]][["expression"]][, 1]), ]
+      while (j <= length(GenModel[[i]])) {
+        Genpredict[[i]][[j]] <-
+          Genpredict[[i]][[j]][which(Genpredict[[i]][[j]][, 1] %in% GenModel[[i]][[j]][["expression"]][, 1]), ]
         
-        sModel[[i]][[j]][["expression"]] <-
-          sModel[[i]][[j]][["expression"]][which(sModel[[i]][[j]][["expression"]][, 1] %in% spredict[[i]][[j]][, 1]), ]
+        GenModel[[i]][[j]][["expression"]] <-
+          GenModel[[i]][[j]][["expression"]][which(GenModel[[i]][[j]][["expression"]][, 1] %in% Genpredict[[i]][[j]][, 1]), ]
         
         j <- j + 1
         
@@ -854,77 +861,63 @@ Plot.R2.ASEnet <- function(Model,
     
     i <- 1
     
-    while (i <= length(sModel)) {
+    while (i <= length(GenModel)) {
       j <- 1
       
       # R2 / spearman correlation
       
-      while (j <= length(sModel[[i]])) {
+      while (j <= length(GenModel[[i]])) {
         sR2[["sites"]][[length(sR2[["sites"]]) + 1]] <-
-          names(sModel[[i]])[j]
+          names(GenModel[[i]])[j]
         
         sR2[["locations"]][[length(sR2[["locations"]]) + 1]] <-
-          sModel[[i]][[j]]$location
+          GenModel[[i]][[j]]$location
         
         sR2[["people"]][[length(sR2[["people"]]) + 1]] <-
-          nrow(sModel[[i]][[j]]$expression)
+          nrow(GenModel[[i]][[j]]$expression)
         
         # halving prediction expression data in genotype level and correlating to ASE expression (try code
         # provides means to get the ASE expression of the genotype level models , as might not be the same)
         
         if (sumASE == 0) {
-          spredictR2 <-
-            c(0.5 * as.numeric(spredict[[i]][[j]][, 2]),
-              0.5 * as.numeric(spredict[[i]][[j]][, 2]))
+          GenpredictR2 <-
+            c(0.5 * as.numeric(Genpredict[[i]][[j]][, 2]),
+              0.5 * as.numeric(Genpredict[[i]][[j]][, 2]))
           
-          names(spredictR2) <-
-            c(names(spredict[[i]][[j]][, 2]), paste(names(spredict[[i]][[j]][, 2]), "_1", sep =
+          names(GenpredictR2) <-
+            c(names(Genpredict[[i]][[j]][, 2]), paste(names(Genpredict[[i]][[j]][, 2]), "_1", sep =
                                                       ""))
           
-          if (class(try(is.character(Model[[names(sModel[i])]][[names(sModel[i][[j]])]][["expression"]][, 2]), silent = TRUE)) != "try-error")
+          if (class(try(is.character(ASEModel[[names(GenModel[i])]][[names(GenModel[i][[j]])]][["expression"]][, 2]), silent = TRUE)) != "try-error")
           {
-            if (is.null(Model[[names(sModel[i])]][[names(sModel[i][[j]])]]))
+            if (is.null(ASEModel[[names(GenModel[i])]][[names(GenModel[i][[j]])]]))
               
             {
-              sModel_expR2 <- rep(NaN, length(spredictR2))
+              GenModel_expR2 <- rep(NaN, length(GenpredictR2))
             }
             
             else{
-              sModel_expR2 <-
-                Model[[names(sModel[i])]][[names(sModel[i][[j]])]][["expression"]][, 2]
+              GenModel_expR2 <-
+                ASEModel[[names(GenModel[i])]][[names(GenModel[i][[j]])]][["expression"]][, 2]
             }
           }
           else{
-            sModel_expR2 <- rep(NaN, length(spredictR2))
+            GenModel_expR2 <- rep(NaN, length(GenpredictR2))
           }
           
-          # correlating to halved Genotype level expression
-          
-          # if (sumASE == 0) {
-          #   spredictR2 <-
-          #     c(0.5 * as.numeric(spredict[[i]][[j]][, 2]),
-          #       0.5 * as.numeric(spredict[[i]][[j]][, 2]))
-          #
-          #   names(spredictR2) <-
-          #     c(names(spredict[[i]][[j]][, 2]), paste(names(spredict[[i]][[j]][, 2]), "_1", sep =
-          #                                               ""))
-          #
-          #   sModel_expR2 <- c(0.5 * as.numeric(sModel[[i]][[j]][["expression"]][, 2]),
-          #                     0.5 * as.numeric(sModel[[i]][[j]][["expression"]][, 2]))
-          
         } else{
-          spredictR2 <- spredict[[i]][[j]][, 2]
+          GenpredictR2 <- Genpredict[[i]][[j]][, 2]
           
-          sModel_expR2 <- sModel[[i]][[j]][["expression"]][, 2]
+          GenModel_expR2 <- GenModel[[i]][[j]][["expression"]][, 2]
           
         }
         
         if (test == "R2") {
-          if (sd(spredictR2) != 0) {
+          if (sd(GenpredictR2) != 0) {
             sR2[["values"]][[length(sR2[["values"]]) + 1]] <-
               summary(lm(
-                as.numeric(spredictR2) ~
-                  as.numeric(sModel_expR2)
+                as.numeric(GenpredictR2) ~
+                  as.numeric(GenModel_expR2)
               ))$r.squared
             
           } else{
@@ -933,10 +926,10 @@ Plot.R2.ASEnet <- function(Model,
           
           
         } else if (test == "SPM") {
-          if (sd(spredictR2) != 0) {
+          if (sd(GenpredictR2) != 0) {
             sR2[["values"]][[length(sR2[["values"]]) + 1]] <-
-              cor(as.numeric(spredictR2),
-                  as.numeric(sModel_expR2),
+              cor(as.numeric(GenpredictR2),
+                  as.numeric(GenModel_expR2),
                   method = "spearman")
             
           } else{
@@ -969,7 +962,7 @@ Plot.R2.ASEnet <- function(Model,
     data <-
       data.frame(
         Model_values = R2c[["values"]],
-        sModel_values = sR2c[["values"]],
+        GenModel_values = sR2c[["values"]],
         Data_Points = R2c$people
       )
     
@@ -1053,7 +1046,7 @@ Plot.R2.ASEnet <- function(Model,
       ggplot(data,
              aes(
                Model_values,
-               sModel_values,
+               GenModel_values,
                colour = Data_Points,
                label = intpoints
              )) +
