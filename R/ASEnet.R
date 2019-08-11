@@ -699,7 +699,7 @@ Plot.R2.ASEnet <- function(ASEModel,
                            # parameters for type 3 plotting
                            sumASE = 0,
                            minp = 0,
-                           mindiff = 0.26,
+                           mindiff = 0.25,
                            minval = 0.65) {
   i <- 1
   
@@ -813,7 +813,7 @@ Plot.R2.ASEnet <- function(ASEModel,
                  Data_Points = R2[["people"]])
     
     p <- ggplot(data, aes(locations, values, color = Data_Points)) +
-      geom_point() +  scale_colour_gradient(low = "white", high = "black")
+      geom_point() +  scale_colour_gradient(high = "#132B43", low = "#56B1F7")
     
     print(p)
     
@@ -831,7 +831,13 @@ Plot.R2.ASEnet <- function(ASEModel,
     
     p <-
       ggplot(data, aes(predicted, observed)) +
-      geom_point() + scale_colour_gradient(low = "white", high = "black")
+      geom_point() + scale_colour_gradient(high = "#132B43", low = "#56B1F7") +
+      xlim(min(data$predicted, data$observed), max(data$predicted, data$observed)) + ylim(min(data$predicted, data$observed), max(data$predicted, data$observed)) + geom_segment(aes(
+        x = min(data$predicted, data$observed),
+        y = min(data$predicted, data$observed),
+        xend = max(data$predicted, data$observed),
+        yend = max(data$predicted, data$observed)
+      ), linetype = 2)
     
     print(p)
     
@@ -998,12 +1004,8 @@ Plot.R2.ASEnet <- function(ASEModel,
         sR2c$values != 0
       
     )] <-
-      paste(intpointscon, paste(
-        round(as.numeric(ai), digits = 2),
-        round(as.numeric(aisd), digits = 2),
-        sep = "+-"
-      ), sep = "_")
-    
+      paste(intpointscon,
+        round(as.numeric(ai), digits = 2))
     
     intpointsSave <-
       
@@ -1051,7 +1053,7 @@ Plot.R2.ASEnet <- function(ASEModel,
                label = intpoints
              )) +
       geom_point() +
-      scale_colour_gradient(low = "grey", high = "black") +
+      scale_colour_gradient(high = "#132B43", low = "#56B1F7") +
       labs(
         x = paste(test, "values for ASE Model"),
         y = paste(test, "values for Genotype Model")
